@@ -1,9 +1,11 @@
 # Standard imports
 from http.cookiejar import CookieJar
 import netrc
-import requests
 from socket import gethostname, gethostbyname
 from urllib import request
+
+# Third-party imports
+import requests
 
 class S3List:
     """Class used to query and download from PO.DAAC's CMR API."""
@@ -116,6 +118,3 @@ class S3List:
         else:
             # Return list
             return s3_urls
-
-        
-        
