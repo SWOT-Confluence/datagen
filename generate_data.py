@@ -170,5 +170,9 @@ def run():
     reach_ids = extract_reach_ids(s3_uris, s3_creds)
     write_json(reach_ids, Path(args.directory).joinpath(REACH_ID_JSON))
 
+    # Create basin data
+    print("Retrieving basin identifiers.")
+    basin = Basin(reach_ids)
+
 if __name__ == "__main__":
     run()
