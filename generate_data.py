@@ -3,7 +3,7 @@
 Also generates a list of S3 URIs for SWOT shapefiles. Accesses PO.DAAC CMR to
 generate a list.
 
-Requires .netrc file to log into CMR API.
+Requires .netrc file to log into CMR API and the AWS CLI tool configured with credentials and region.
 
 Command line arguments:
  -s: short name of the collection
@@ -17,17 +17,20 @@ Example: python3 generate_data.py -p POCLOUD -s SWOT_SIMULATED_NA_CONTINENT_L2_H
 import argparse
 import json
 from pathlib import Path
-from tkinter import E
 
 # Third-party imports
 import boto3
 import botocore
+import fsspec
+import geopandas
 import requests
 
 # Local imports
+from Basin import Basin
 from S3List import S3List
 
 # Constants
+REACH_ID_JSON = "reach_id_list.json"
 S3_FILENAME = "s3_list.json"
 S3_CRED_ENDPOINT = {
     'pocloud':'https://archive.podaac.earthdata.nasa.gov/s3credentials',
@@ -93,12 +96,21 @@ def get_s3_creds(provider):
             Overwrite=True,
             Tier="Standard"
         )
+        response = ssm_client.put_parameter(
+            Name="s3_creds_expiration",
+            Description="Temporary SWOT S3 bucket expiration",
+            Value=s3_creds["expiration"],
+            Type="SecureString",
+            KeyId="1416df6c-7a20-46a1-949d-d26975acfdd0",
+            Overwrite=True,
+            Tier="Standard"
+        )
     except botocore.exceptions.ClientError:
         raise
     else:
         return s3_creds
 
-def extract_reach_ids(shapefiles):
+def extract_reach_ids(shapefiles, creds):
     """Extract reach identifiers from shapefile names and return a list.
     
     Parameters
@@ -107,8 +119,16 @@ def extract_reach_ids(shapefiles):
         list of shapefile names
     """
 
-    # for shapefile in shapefiles:
-    #     print(shapefile)
+    reach_ids = []
+    for shapefile in shapefiles:
+        with fsspec.open(f"{shapefile}", mode="rb", anon=False, 
+            key=creds["accessKeyId"], secret=creds["secretAccessKey"], 
+            token=creds["sessionToken"]) as sf:
+
+            df = geopandas.read_file(sf)
+            reach_ids.extend(df["reach_id"].values)
+        
+    return reach_ids           
 
 def write_json(json_object, filename):
     """Write JSON object as a JSON file to the specified filename."""
@@ -125,7 +145,7 @@ def run():
     args = arg_parser.parse_args()
 
     # Retrieve a list of S3 files
-    print("Retrieving list of S3 URIs.")
+    print("Retrieving and storing list of S3 URIs.")
     s3_list = S3List()
     try:
         s3_uris = s3_list.login_and_run_query(args.shortname, args.provider, args.temporalrange)
@@ -134,9 +154,6 @@ def run():
         print(e)
         print("Error encountered. Exiting program.")
         exit(1)
-
-    # Extract a list of reach identifiers
-    reach_ids = extract_reach_ids(s3_uris)
 
     # Retrieve SWOT S3 bucket credentials
     print("Retrieving and storing credentials.")
@@ -147,6 +164,11 @@ def run():
         print("Could not store S3 credentials and will not be able to run input module.")
         print("Program exiting.")
         exit(1)
+
+    # Extract a list of reach identifiers
+    print("Extracting reach identifiers from shapefiles.")
+    reach_ids = extract_reach_ids(s3_uris, s3_creds)
+    write_json(reach_ids, Path(args.directory).joinpath(REACH_ID_JSON))
 
 if __name__ == "__main__":
     run()
