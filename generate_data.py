@@ -40,6 +40,7 @@ import shapefile
 from conf import conf
 from Basin import Basin
 from Reach import Reach
+from ReachNode import ReachNode
 from S3List import S3List
 
 def create_args():
@@ -218,7 +219,7 @@ def run_local(args, cont):
     """Load shapefiles in from local file system and return reach identifiers."""
     
     # Extract reach identifiers from local files
-    print("Extracting reach and node  identifiers from shapefiles.")
+    print("Extracting reach and node identifiers from shapefiles.")
     reach_ids = []
     node_ids = []
     with os.scandir(Path(args.shapefiledir)) as shpfiles:
@@ -285,6 +286,13 @@ def run():
     json_file = Path(args.directory).joinpath(conf["reach"])
     print(f"Writing reach data to: {json_file}")
     write_json(reach_data, json_file)
+    
+    # Create reach node data
+    reach_node = ReachNode(reach_ids, node_ids)
+    reach_node_data = reach_node.extract_data()
+    json_file = Path(args.directory).joinpath(conf["reach_node"])
+    print(f"Writing reach node data to: {json_file}")
+    write_json(reach_node_data, json_file)
 
 if __name__ == "__main__":
     import datetime
