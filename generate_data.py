@@ -39,6 +39,7 @@ import shapefile
 # Local imports
 from conf import conf
 from Basin import Basin
+from Reach import Reach
 from S3List import S3List
 
 def create_args():
@@ -256,6 +257,14 @@ def run():
     json_file = Path(args.directory).joinpath(conf["basin"])
     print(f"Writing basin data to: {json_file}")
     write_json(basin_data, json_file)
+    
+    # Create reach data
+    print("Retrieving reach data.")
+    reach = Reach(reach_ids, sword_filename, sos_filename)
+    reach_data = reach.extract_data()
+    json_file = Path(args.directory).joinpath(conf["reach"])
+    print(f"Writing reach data to: {json_file}")
+    write_json(reach_data, json_file)
 
 if __name__ == "__main__":
     import datetime
