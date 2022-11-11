@@ -3,7 +3,11 @@
 Also generates a list of S3 URIs for SWOT shapefiles. Accesses PO.DAAC CMR to
 generate a list.
 
-Requires .netrc file to log into CMR API and the AWS CLI tool configured with credentials and region.
+Requires .netrc file to log into CMR API and the AWS CLI tool configured with 
+credentials and region.
+
+Local execution option available, if you run locally, please place shapefiles in
+the --d or --directory referenced in command line arguments.
 
 Command line arguments:
  -i: index to locate continent in JSON file
@@ -11,6 +15,9 @@ Command line arguments:
  -t: temporal range to retrieve S3 URIs
  -p: the collection provider name
  -d: where to locate and save JSON data
+ -l: indicates local run (optional)
+ -j: name of JSON file (optional)
+ -s: name of shapefile directory for local runs (optional)
 
 Example: python3 generate_data.py -i 3 -p POCLOUD -s SWOT_SIMULATED_NA_CONTINENT_L2_HR_RIVERSP_V1 -t 2022-08-01T00:00:00Z,2022-08-22T23:59:59Z -d /home/useraccount/json_data
 """
@@ -72,6 +79,14 @@ def create_args():
                             type=str,
                             help="Name of continent JSON file",
                             default="continent.json")
+    arg_parser.add_argument("-l",
+                            "--local",
+                            help="Indicate local run",
+                            action="store_true")
+    arg_parser.add_argument("-f",
+                            "--shapefiledir",
+                            type=str,
+                            help="Directory of local shapefiles")
     return arg_parser
 
 def get_continent(index, json_file):
@@ -165,13 +180,9 @@ def write_json(json_object, filename):
     with open(filename, 'w') as jf:
         json.dump(json_object, jf, indent=2)
 
-
-def run():
-    """Execute the operations needed to generate JSON data."""
-
-    # Command line arguments
-    arg_parser = create_args()
-    args = arg_parser.parse_args()
+def run_aws(args):
+    """Executes operations to retrieve reach identifiers from shapefiles hosted
+    in AWS S3 bucket."""
     
     # Determine continent to run on
     cont = get_continent(args.index, Path(args.directory).joinpath(args.jsonfile))
@@ -201,6 +212,41 @@ def run():
     # Extract a list of reach identifiers
     print("Extracting reach identifiers from shapefiles.")
     reach_ids = extract_reach_ids(s3_uris, s3_creds)
+    
+    return reach_ids
+
+def run_local(args):
+    """Load shapefiles in from local file system and return reach identifiers."""
+    
+    reach_ids = []
+    with os.scandir(Path(args.shapefiledir)) as shpfiles:
+        for shpfile in shpfiles:        
+            # Locate and open DBF file
+            dbf_file = f"{shpfile.name.split('/')[-1].split('.')[0]}.dbf"            
+            zip_file = zipfile.ZipFile(shpfile, 'r')
+            with zip_file.open(dbf_file) as dbf:
+                sf = shapefile.Reader(dbf=dbf)
+                records = sf.records()
+                reach_id = {rec["reach_id"] for rec in records}                
+            reach_ids.extend(list(reach_id))
+    # Remove duplicates from mulitple files
+    reach_ids = list(set(reach_ids))  
+    return reach_ids    
+
+def run():
+    """Execute the operations needed to generate JSON data."""
+
+    # Command line arguments
+    arg_parser = create_args()
+    args = arg_parser.parse_args()
+    
+    # Determine where run is taking place (local or aws)
+    if args.local:
+        reach_ids = run_local(args)
+    else:
+        reach_ids = run_aws(args)
+    
+    # Writing JSON file of reach identifiers
     write_json(reach_ids, Path(args.directory).joinpath(REACH_ID_JSON))
 
     # # Create basin data
