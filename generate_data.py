@@ -148,6 +148,7 @@ def extract_ids(shpfiles, creds):
     """
 
     reach_ids = []
+    node_ids = []
     for shpfile in shpfiles:
         # Open S3 zip file
         with fsspec.open(f"{shpfile}", mode="rb", anon=False, 
@@ -160,19 +161,20 @@ def extract_ids(shpfiles, creds):
             with zip_file.open(dbf_file) as dbf:
                 sf = shapefile.Reader(dbf=dbf)
                 records = sf.records()
-                reach_id = {rec["reach_id"] for rec in records}
+                if "Reach" in shpfile:
+                    reach_id = {rec["reach_id"] for rec in records}
+                    reach_ids.extend(list(reach_id))
+
                 if "Node" in shpfile: 
                     node_id = {rec["node_id"] for rec in records}
-                else:
-                    node_id = set()        
-            reach_ids.extend(list(reach_id))
-            node_ids.extend(list(node_id))
+                    node_ids.extend(list(node_id))            
+            
     # Remove duplicates from multiple files
     reach_ids = list(set(reach_ids))
     reach_ids.sort()
     node_ids = list(set(node_ids))
     node_ids.sort()
-    return reach_ids           
+    return reach_ids, node_ids     
 
 def write_json(json_object, filename):
     """Write JSON object as a JSON file to the specified filename."""
@@ -190,7 +192,7 @@ def run_aws(args, cont):
     try:
         s3_uris = s3_list.login_and_run_query(args.shortname, args.provider, args.temporalrange)
         s3_uris = list(filter(lambda uri, cont=cont: cont in uri, s3_uris))    # Filter for continent
-        write_json(s3_uris, Path(args.directory).joinpath(conf["sf_list"]))
+        write_json(s3_uris, Path(args.directory).joinpath(conf["s3_list"]))
     except Exception as e:
         print(e)
         print("Error encountered. Exiting program.")
@@ -207,16 +209,16 @@ def run_aws(args, cont):
         exit(1)
 
     # Extract a list of reach identifiers
-    print("Extracting reach identifiers from shapefiles.")
-    reach_ids = extract_ids(s3_uris, s3_creds)
+    print("Extracting reach and node identifiers from shapefiles.")
+    reach_ids, node_ids = extract_ids(s3_uris, s3_creds)
     
-    return reach_ids
+    return reach_ids, node_ids
 
 def run_local(args, cont):
     """Load shapefiles in from local file system and return reach identifiers."""
     
     # Extract reach identifiers from local files
-    print("Extracting reach identifiers from shapefiles.")
+    print("Extracting reach and node  identifiers from shapefiles.")
     reach_ids = []
     node_ids = []
     with os.scandir(Path(args.shapefiledir)) as shpfiles:
@@ -228,13 +230,13 @@ def run_local(args, cont):
                 with zip_file.open(dbf_file) as dbf:
                     sf = shapefile.Reader(dbf=dbf)
                     records = sf.records()
-                    reach_id = {rec["reach_id"] for rec in records}
+                    if "Reach" in shpfile.name:
+                        reach_id = {rec["reach_id"] for rec in records}
+                        reach_ids.extend(list(reach_id))
                     if "Node" in shpfile.name:
                         node_id = {rec["node_id"] for rec in records}
-                    else:
-                        node_id = set()
-                reach_ids.extend(list(reach_id))
-                node_ids.extend(list(node_id))
+                        node_ids.extend(list(node_id))
+                        
     # Remove duplicates from multiple files
     reach_ids = list(set(reach_ids))
     reach_ids.sort()
@@ -259,11 +261,11 @@ def run():
         reach_ids, node_ids = run_aws(args, cont)
     
     # Writing JSON file of reach identifiers
-    json_file = Path(args.directory).joinpath(conf["reach_id_list"])
-    print(f"Writing list of reach identifiers to: {json_file}")
-    write_json(reach_ids, json_file)
-    write_json(node_ids, Path(args.directory).joinpath("node_id.json"))
-
+    # json_file = Path(args.directory).joinpath(conf["reach_id_list"])
+    # print(f"Writing list of reach identifiers to: {json_file}")
+    # write_json(reach_ids, json_file)
+    # write_json(node_ids, Path(args.directory).joinpath("node_id.json"))
+    
     # Filenames
     sword_filename = f"{cont.lower()}_{conf['sword_suffix']}"
     sos_filename = f"{cont.lower()}_{conf['sos_suffix']}"
