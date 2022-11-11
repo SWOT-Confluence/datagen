@@ -39,6 +39,7 @@ import shapefile
 # Local imports
 from conf import conf
 from Basin import Basin
+from CyclePass import CyclePass
 from Reach import Reach
 from ReachNode import ReachNode
 from S3List import S3List
@@ -213,7 +214,10 @@ def run_aws(args, cont):
     print("Extracting reach and node identifiers from shapefiles.")
     reach_ids, node_ids = extract_ids(s3_uris, s3_creds)
     
-    return reach_ids, node_ids
+    # Creat a list of only shapfile names
+    shp_files = [shp.split('/')[-1].split('.')[0] for shp in s3_uris]
+    shp_files.sort()
+    return shp_files, reach_ids, node_ids
 
 def run_local(args, cont):
     """Load shapefiles in from local file system and return reach identifiers."""
@@ -222,9 +226,11 @@ def run_local(args, cont):
     print("Extracting reach and node identifiers from shapefiles.")
     reach_ids = []
     node_ids = []
+    shp_files = []
     with os.scandir(Path(args.shapefiledir)) as shpfiles:
         for shpfile in shpfiles:
             if cont in shpfile.name:    # Filter by continent
+                shp_files.append(shpfile.name)
                 # Locate and open DBF file
                 dbf_file = f"{shpfile.name.split('/')[-1].split('.')[0]}.dbf"            
                 zip_file = zipfile.ZipFile(shpfile, 'r')
@@ -238,12 +244,13 @@ def run_local(args, cont):
                         node_id = {rec["node_id"] for rec in records}
                         node_ids.extend(list(node_id))
                         
-    # Remove duplicates from multiple files
+    # Remove duplicates from multiple files and sort
     reach_ids = list(set(reach_ids))
     reach_ids.sort()
     node_ids = list(set(node_ids))
     node_ids.sort()
-    return reach_ids, node_ids 
+    shp_files.sort()
+    return shp_files, reach_ids, node_ids
 
 def run():
     """Execute the operations needed to generate JSON data."""
@@ -257,15 +264,19 @@ def run():
     
     # Determine where run is taking place (local or aws)
     if args.local:
-        reach_ids, node_ids = run_local(args, cont)
+        shp_files, reach_ids, node_ids = run_local(args, cont)
     else:
-        reach_ids, node_ids = run_aws(args, cont)
+        shp_files, reach_ids, node_ids = run_aws(args, cont)
     
-    # Writing JSON file of reach identifiers
-    # json_file = Path(args.directory).joinpath(conf["reach_id_list"])
-    # print(f"Writing list of reach identifiers to: {json_file}")
-    # write_json(reach_ids, json_file)
-    # write_json(node_ids, Path(args.directory).joinpath("node_id.json"))
+    # Create cycle pass data
+    cycle_pass = CyclePass(shp_files)
+    cycle_pass_data, pass_num = cycle_pass.get_cycle_pass_data()
+    json_file = Path(args.directory).joinpath(conf["cycle_passes"])
+    print(f"Writing cycle pass data to: {json_file}")
+    write_json(cycle_pass_data, json_file)
+    json_file = Path(args.directory).joinpath(conf["passes"])
+    print(f"Writing pass number data to: {json_file}")
+    write_json(pass_num, json_file)
     
     # Filenames
     sword_filename = f"{cont.lower()}_{conf['sword_suffix']}"
@@ -292,7 +303,7 @@ def run():
     reach_node_data = reach_node.extract_data()
     json_file = Path(args.directory).joinpath(conf["reach_node"])
     print(f"Writing reach node data to: {json_file}")
-    write_json(reach_node_data, json_file)
+    write_json(reach_node_data, json_file)    
 
 if __name__ == "__main__":
     import datetime

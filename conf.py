@@ -1,5 +1,7 @@
 conf = {
     "basin": "basin.json",
+    "cycle_passes": "cycle_passes.json",
+    "passes": "passes.json",
     "reach_id_list": "reach_id.json",
     "reach": "reaches.json",
     "reach_node": "reach_node.json",
