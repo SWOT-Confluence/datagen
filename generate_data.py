@@ -299,6 +299,7 @@ def run():
     write_json(reach_data, json_file)
     
     # Create reach node data
+    print("Retrieving reach node data.")
     reach_node = ReachNode(reach_ids, node_ids)
     reach_node_data = reach_node.extract_data()
     json_file = Path(args.directory).joinpath(conf["reach_node"])
