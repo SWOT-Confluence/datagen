@@ -6,16 +6,19 @@ generate a list.
 Requires .netrc file to log into CMR API and the AWS CLI tool configured with credentials and region.
 
 Command line arguments:
+ -i: index to locate continent in JSON file
  -s: short name of the collection
  -t: temporal range to retrieve S3 URIs
  -p: the collection provider name
+ -d: where to locate and save JSON data
 
-Example: python3 generate_data.py -p POCLOUD -s SWOT_SIMULATED_NA_CONTINENT_L2_HR_RIVERSP_V1 -t 2022-08-01T00:00:00Z,2022-08-22T23:59:59Z -d /home/useraccount/json_data
+Example: python3 generate_data.py -i 3 -p POCLOUD -s SWOT_SIMULATED_NA_CONTINENT_L2_HR_RIVERSP_V1 -t 2022-08-01T00:00:00Z,2022-08-22T23:59:59Z -d /home/useraccount/json_data
 """
 
 # Standard imports
 import argparse
 import json
+import os
 from pathlib import Path
 import zipfile
 
@@ -44,6 +47,10 @@ def create_args():
     """Create and return argparser with arguments."""
 
     arg_parser = argparse.ArgumentParser(description="Retrieve a list of S3 URIs")
+    arg_parser.add_argument("-i",
+                            "--index",
+                            type=str,
+                            help="Index value to select continent to run on")
     arg_parser.add_argument("-p",
                             "--provider",
                             type=str,
@@ -60,7 +67,20 @@ def create_args():
                             "--directory",
                             type=str,
                             help="Directory to save JSON data to")
+    arg_parser.add_argument("-j",
+                            "--jsonfile",
+                            type=str,
+                            help="Name of continent JSON file",
+                            default="continent.json")
     return arg_parser
+
+def get_continent(index, json_file):
+    """Retrieve continent to run datagen operations for."""
+    
+    i = int(index) if index != "-235" else os.environ.get("AWS_BATCH_JOB_ARRAY_INDEX")
+    with open(json_file) as jf:
+        data = json.load(jf)
+    return list(data[i].keys())[0].upper()
 
 def get_s3_creds(provider):
     """Retreive S3 credentials from endpoint, write to SSM parameter store
@@ -152,12 +172,16 @@ def run():
     # Command line arguments
     arg_parser = create_args()
     args = arg_parser.parse_args()
+    
+    # Determine continent to run on
+    cont = get_continent(args.index, Path(args.directory).joinpath(args.jsonfile))
 
     # Retrieve a list of S3 files
     print("Retrieving and storing list of S3 URIs.")
     s3_list = S3List()
     try:
         s3_uris = s3_list.login_and_run_query(args.shortname, args.provider, args.temporalrange)
+        s3_uris = list(filter(lambda uri, cont=cont: cont in uri, s3_uris))    # Filter for continent
         write_json(s3_uris, Path(args.directory).joinpath(S3_FILENAME))
     except Exception as e:
         print(e)
