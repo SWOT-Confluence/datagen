@@ -7,5 +7,7 @@ conf = {
         'lpdaac':'https://data.lpdaac.earthdatacloud.nasa.gov/s3credentials',
         'ornldaac':'https://data.ornldaac.earthdata.nasa.gov/s3credentials',
         'gesdisc':'https://data.gesdisc.earthdata.nasa.gov/s3credentials'
-    }
+    },
+    "sos_suffix": "sword_v11_SOS_priors.nc",
+    "sword_suffix": "sword_v11",
 }

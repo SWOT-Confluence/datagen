@@ -17,30 +17,29 @@ class Basin:
         list of dictionaries of basin identifier keys and filename values
     reach_ids: list
         list of string reach identifiers
-    SOS_SUFFIX: str
-        suffix to append to the SWORD file name
-    SWORD_FILENAME: str
-        name of SWORD file that holds Ohio River data 
+    sos_filename: str
+        name of SOS file
+    sword_filename: str
+        name of SWORD file 
     
     Methods
     -------
     extract_data()
         extracts reach identifier and maps to file name
     """
-    
-    SWORD_FILENAME = "na_sword_v11.nc"
-    SOS_SUFFIX = "SOS_priors.nc"
 
-    def __init__(self, reach_ids):
+    def __init__(self, reach_ids, sword_filename, sos_filename):
         """
         Parameters
         ----------
         output_dir: Path
             path to write JSON output file to
         """
-
+        
         self.basin_data = []
         self.reach_ids = reach_ids
+        self.sos_filename = sos_filename
+        self.sword_filename = sword_filename
 
     def extract_data(self):
         """Extracts basin and reach identifier and maps to data file names.
@@ -52,14 +51,11 @@ class Basin:
         continents in SWORD.
         """
         
-        # Retrieve basin identifiers, reach identifiers, and SWORD file names
+        # Retrieve basin identifiers, reach identifiers, SWORD file names, and SOS file names
         self.get_sword()
                 
         # Assign SWOT file names
         self.get_swot()
-        
-        # Assign SOS file names
-        self.get_sos()
         
         return self.basin_data
         
@@ -70,7 +66,8 @@ class Basin:
         for basin_id in basin_ids:
             self.basin_data.append({"basin_id": basin_id, 
                                     "reach_id": extract_reach_ids(basin_id, self.reach_ids),
-                                    "sword": self.SWORD_FILENAME})
+                                    "sword": self.sword_filename,
+                                    "sos": self.sos_filename})
             
     def get_swot(self):
         """Assign SWOT file names to basin_data dictionaries."""
@@ -79,12 +76,6 @@ class Basin:
             element["swot"] = []
             for reach_id in element["reach_id"]:
                 element["swot"].append(f"{reach_id}_SWOT.nc")
-                
-    def get_sos(self):
-        """Assign SOS file names to basin_data dictionaries."""
-        
-        for element in self.basin_data:
-            element["sos"] = f"{element['sword'].split('.')[0]}_SOS.nc"
 
 def extract_reach_ids(basin_id, reach_ids):
     """Extract all reach identfiers for basin.

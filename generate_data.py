@@ -171,12 +171,9 @@ def write_json(json_object, filename):
     with open(filename, 'w') as jf:
         json.dump(json_object, jf, indent=2)
 
-def run_aws(args):
+def run_aws(args, cont):
     """Executes operations to retrieve reach identifiers from shapefiles hosted
     in AWS S3 bucket."""
-    
-    # Determine continent to run on
-    cont = get_continent(args.index, Path(args.directory).joinpath(args.jsonfile))
 
     # Retrieve a list of S3 files
     print("Retrieving and storing list of S3 URIs.")
@@ -206,22 +203,23 @@ def run_aws(args):
     
     return reach_ids
 
-def run_local(args):
+def run_local(args, cont):
     """Load shapefiles in from local file system and return reach identifiers."""
     
     # Extract reach identifiers from local files
     print("Extracting reach identifiers from shapefiles.")
     reach_ids = []
     with os.scandir(Path(args.shapefiledir)) as shpfiles:
-        for shpfile in shpfiles:        
-            # Locate and open DBF file
-            dbf_file = f"{shpfile.name.split('/')[-1].split('.')[0]}.dbf"            
-            zip_file = zipfile.ZipFile(shpfile, 'r')
-            with zip_file.open(dbf_file) as dbf:
-                sf = shapefile.Reader(dbf=dbf)
-                records = sf.records()
-                reach_id = {rec["reach_id"] for rec in records}                
-            reach_ids.extend(list(reach_id))
+        for shpfile in shpfiles:
+            if cont in shpfile.name:    # Filter by continent
+                # Locate and open DBF file
+                dbf_file = f"{shpfile.name.split('/')[-1].split('.')[0]}.dbf"            
+                zip_file = zipfile.ZipFile(shpfile, 'r')
+                with zip_file.open(dbf_file) as dbf:
+                    sf = shapefile.Reader(dbf=dbf)
+                    records = sf.records()
+                    reach_id = {rec["reach_id"] for rec in records}                
+                reach_ids.extend(list(reach_id))
     # Remove duplicates from mulitple files
     reach_ids = list(set(reach_ids))  
     return reach_ids    
@@ -233,25 +231,31 @@ def run():
     arg_parser = create_args()
     args = arg_parser.parse_args()
     
+    # Determine continent to run on
+    cont = get_continent(args.index, Path(args.directory).joinpath(args.jsonfile))
+    
     # Determine where run is taking place (local or aws)
     if args.local:
-        reach_ids = run_local(args)
+        reach_ids = run_local(args, cont)
     else:
-        reach_ids = run_aws(args)
+        reach_ids = run_aws(args, cont)
     
     # Writing JSON file of reach identifiers
     json_file = Path(args.directory).joinpath(conf["reach_id_list"])
     print(f"Writing list of reach identifiers to: {json_file}")
     write_json(reach_ids, json_file)
 
+    # Filenames
+    sword_filename = f"{cont.lower()}_{conf['sword_suffix']}"
+    sos_filename = f"{cont.lower()}_{conf['sos_suffix']}"
+    
     # Create basin data
     print("Retrieving basin data.")
-    basin = Basin(reach_ids)
+    basin = Basin(reach_ids, sword_filename, sos_filename)
     basin_data = basin.extract_data()
     json_file = Path(args.directory).joinpath(conf["basin"])
     print(f"Writing basin data to: {json_file}")
     write_json(basin_data, json_file)
-    
 
 if __name__ == "__main__":
     import datetime
