@@ -61,6 +61,8 @@ class Basin:
         # Assign SOS file names
         self.get_sos()
         
+        return self.basin_data
+        
     def get_sword(self):
         """Associate basin identifiers, reach identifiers and SWORD file names."""
         

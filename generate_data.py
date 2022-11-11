@@ -37,18 +37,9 @@ import requests
 import shapefile
 
 # Local imports
+from conf import conf
 from Basin import Basin
 from S3List import S3List
-
-# Constants
-REACH_ID_JSON = "reach_id_list.json"
-S3_FILENAME = "s3_list.json"
-S3_CRED_ENDPOINT = {
-    'pocloud':'https://archive.podaac.earthdata.nasa.gov/s3credentials',
-    'lpdaac':'https://data.lpdaac.earthdatacloud.nasa.gov/s3credentials',
-    'ornldaac':'https://data.ornldaac.earthdata.nasa.gov/s3credentials',
-    'gesdisc':'https://data.gesdisc.earthdata.nasa.gov/s3credentials'
-}
 
 def create_args():
     """Create and return argparser with arguments."""
@@ -101,7 +92,7 @@ def get_s3_creds(provider):
     """Retreive S3 credentials from endpoint, write to SSM parameter store
     and return them."""
 
-    s3_creds = requests.get(S3_CRED_ENDPOINT[provider.lower()]).json()
+    s3_creds = requests.get(conf["s3_cred_endpoints"][provider.lower()]).json()
 
     ssm_client = boto3.client('ssm')
     try:
@@ -193,7 +184,7 @@ def run_aws(args):
     try:
         s3_uris = s3_list.login_and_run_query(args.shortname, args.provider, args.temporalrange)
         s3_uris = list(filter(lambda uri, cont=cont: cont in uri, s3_uris))    # Filter for continent
-        write_json(s3_uris, Path(args.directory).joinpath(S3_FILENAME))
+        write_json(s3_uris, Path(args.directory).joinpath(conf["sf_list"]))
     except Exception as e:
         print(e)
         print("Error encountered. Exiting program.")
@@ -218,6 +209,8 @@ def run_aws(args):
 def run_local(args):
     """Load shapefiles in from local file system and return reach identifiers."""
     
+    # Extract reach identifiers from local files
+    print("Extracting reach identifiers from shapefiles.")
     reach_ids = []
     with os.scandir(Path(args.shapefiledir)) as shpfiles:
         for shpfile in shpfiles:        
@@ -247,11 +240,18 @@ def run():
         reach_ids = run_aws(args)
     
     # Writing JSON file of reach identifiers
-    write_json(reach_ids, Path(args.directory).joinpath(REACH_ID_JSON))
+    json_file = Path(args.directory).joinpath(conf["reach_id_list"])
+    print(f"Writing list of reach identifiers to: {json_file}")
+    write_json(reach_ids, json_file)
 
-    # # Create basin data
-    # print("Retrieving basin identifiers.")
-    # basin = Basin(reach_ids)
+    # Create basin data
+    print("Retrieving basin data.")
+    basin = Basin(reach_ids)
+    basin_data = basin.extract_data()
+    json_file = Path(args.directory).joinpath(conf["basin"])
+    print(f"Writing basin data to: {json_file}")
+    write_json(basin_data, json_file)
+    
 
 if __name__ == "__main__":
     import datetime
