@@ -17,13 +17,14 @@ Example: python3 generate_data.py -p POCLOUD -s SWOT_SIMULATED_NA_CONTINENT_L2_H
 import argparse
 import json
 from pathlib import Path
+import zipfile
 
 # Third-party imports
 import boto3
 import botocore
 import fsspec
-import geopandas
 import requests
+import shapefile
 
 # Local imports
 from Basin import Basin
@@ -110,7 +111,7 @@ def get_s3_creds(provider):
     else:
         return s3_creds
 
-def extract_reach_ids(shapefiles, creds):
+def extract_reach_ids(shpfiles, creds):
     """Extract reach identifiers from shapefile names and return a list.
     
     Parameters
@@ -120,14 +121,22 @@ def extract_reach_ids(shapefiles, creds):
     """
 
     reach_ids = []
-    for shapefile in shapefiles:
-        with fsspec.open(f"{shapefile}", mode="rb", anon=False, 
+    for shpfile in shpfiles:
+        # Open S3 zip file
+        with fsspec.open(f"{shpfile}", mode="rb", anon=False, 
             key=creds["accessKeyId"], secret=creds["secretAccessKey"], 
-            token=creds["sessionToken"]) as sf:
+            token=creds["sessionToken"]) as shpfh:
 
-            df = geopandas.read_file(sf)
-            reach_ids.extend(df["reach_id"].values)
-        
+            # Locate and open DBF file
+            dbf_file = f"{shpfile.split('/')[-1].split('.')[0]}.dbf"            
+            zip_file = zipfile.ZipFile(shpfh, 'r')
+            with zip_file.open(dbf_file) as dbf:
+                sf = shapefile.Reader(dbf=dbf)
+                records = sf.records()
+                reach_id = {rec["reach_id"] for rec in records}                
+            reach_ids.extend(list(reach_id))
+    # Remove duplicates from mulitple files
+    reach_ids = list(set(reach_ids))   
     return reach_ids           
 
 def write_json(json_object, filename):
@@ -170,9 +179,13 @@ def run():
     reach_ids = extract_reach_ids(s3_uris, s3_creds)
     write_json(reach_ids, Path(args.directory).joinpath(REACH_ID_JSON))
 
-    # Create basin data
-    print("Retrieving basin identifiers.")
-    basin = Basin(reach_ids)
+    # # Create basin data
+    # print("Retrieving basin identifiers.")
+    # basin = Basin(reach_ids)
 
 if __name__ == "__main__":
+    import datetime
+    start = datetime.datetime.now()
     run()
+    end = datetime.datetime.now()
+    print(f"Execution time: {end - start}")
