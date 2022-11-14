@@ -20,8 +20,8 @@ class CyclePass:
         """
         
         self.shp_files = shp_files
-        self.cycle_pass_data = []
-        self.pass_num = []
+        self.cycle_pass_data = {}
+        self.pass_num = {}
         
     def get_cycle_pass_data(self):
         """Return cycle pass combinations associated with numeric identifier."""
@@ -30,7 +30,7 @@ class CyclePass:
         for shp_file in self.shp_files:
             cycle_no = shp_file.split('_')[5]
             pass_no = shp_file.split('_')[6]
-            self.cycle_pass_data.append({f"{cycle_no}_{pass_no}": p})
-            self.pass_num.append({p: [cycle_no, pass_no]})
+            self.cycle_pass_data[f"{cycle_no}_{pass_no}"] = p
+            self.pass_num[p] = [cycle_no, pass_no]
             p += 1
         return self.cycle_pass_data, self.pass_num
