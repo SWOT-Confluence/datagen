@@ -27,6 +27,7 @@ import argparse
 import json
 import os
 from pathlib import Path
+import re
 import zipfile
 
 # Third-party imports
@@ -176,7 +177,15 @@ def extract_ids(shpfiles, creds):
     reach_ids.sort()
     node_ids = list(set(node_ids))
     node_ids.sort()
-    return reach_ids, node_ids     
+    return reach_ids, node_ids
+
+def strtoi(text):
+    return int(text) if text.isdigit() else text
+
+def sort_shapefiles(shapefile):
+    """Sort shapefiles so that they are in ascending order."""
+    
+    return [ strtoi(shp) for shp in re.split(r'(\d+)', shapefile) ]
 
 def write_json(json_object, filename):
     """Write JSON object as a JSON file to the specified filename."""
@@ -194,6 +203,7 @@ def run_aws(args, cont):
     try:
         s3_uris = s3_list.login_and_run_query(args.shortname, args.provider, args.temporalrange)
         s3_uris = list(filter(lambda uri, cont=cont: cont in uri, s3_uris))    # Filter for continent
+        s3_uris.sort(key=sort_shapefiles)
         write_json(s3_uris, Path(args.directory).joinpath(conf["s3_list"]))
     except Exception as e:
         print(e)
@@ -216,7 +226,6 @@ def run_aws(args, cont):
     
     # Creat a list of only shapfile names
     shp_files = [shp.split('/')[-1].split('.')[0] for shp in s3_uris]
-    shp_files.sort()
     return shp_files, reach_ids, node_ids
 
 def run_local(args, cont):
@@ -249,7 +258,9 @@ def run_local(args, cont):
     reach_ids.sort()
     node_ids = list(set(node_ids))
     node_ids.sort()
-    shp_files.sort()
+    shp_files.sort(key=sort_shapefiles)
+    shp_json = [ str(Path(args.shapefiledir).parent.joinpath(shp)) for shp in shp_files ]
+    write_json(shp_json, Path(args.directory).joinpath(conf["s3_list_local"]))
     return shp_files, reach_ids, node_ids
 
 def run():
