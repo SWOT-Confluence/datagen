@@ -259,7 +259,7 @@ def run_local(args, cont):
     node_ids = list(set(node_ids))
     node_ids.sort()
     shp_files.sort(key=sort_shapefiles)
-    shp_json = [ str(Path(args.shapefiledir).parent.joinpath(shp)) for shp in shp_files ]
+    shp_json = [ str(Path(args.shapefiledir).joinpath(shp)) for shp in shp_files ]
     write_json(shp_json, Path(args.directory).joinpath(conf["s3_list_local"]))
     return shp_files, reach_ids, node_ids
 
