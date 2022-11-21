@@ -28,8 +28,9 @@ class CyclePass:
         
         p = 1
         for shp_file in self.shp_files:
-            cycle_no = shp_file.split('_')[5]
-            pass_no = shp_file.split('_')[6]
+            shp_name = shp_file.split('/')[-1]
+            cycle_no = shp_name.split('_')[5]
+            pass_no = shp_name.split('_')[6]
             if not f"{cycle_no}_{pass_no}" in self.cycle_pass_data:
                 self.cycle_pass_data[f"{cycle_no}_{pass_no}"] = p
                 self.pass_num[p] = [cycle_no, pass_no]
