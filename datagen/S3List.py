@@ -1,10 +1,13 @@
 # Standard imports
+import base64
 from http.cookiejar import CookieJar
-import netrc
+import json
 from socket import gethostname, gethostbyname
 from urllib import request
 
 # Third-party imports
+import boto3
+import botocore
 import requests
 
 class S3List:
@@ -15,18 +18,95 @@ class S3List:
 
     def __init__(self):
         self._token = None
+        
+    def get_creds(self, s3_endpoint, edl_username, edl_password):
+        """Request and return temporary S3 credentials.
+        
+        Taken from: https://archive.podaac.earthdata.nasa.gov/s3credentialsREADME
+        """
+        
+        login = requests.get(
+            s3_endpoint, allow_redirects=False
+        )
+        login.raise_for_status()
+
+        auth = f"{edl_username}:{edl_password}"
+        encoded_auth  = base64.b64encode(auth.encode('ascii'))
+
+        auth_redirect = requests.post(
+            login.headers['location'],
+            data = {"credentials": encoded_auth},
+            headers= { "Origin": s3_endpoint },
+            allow_redirects=False
+        )
+        auth_redirect.raise_for_status()
+        final = requests.get(auth_redirect.headers['location'], allow_redirects=False)
+        results = requests.get(s3_endpoint, cookies={'accessToken': final.cookies['accessToken']})
+        results.raise_for_status()
+        return json.loads(results.content)       
+        
+    def get_s3_creds(self, s3_endpoint, edl_username, edl_password):
+        """Retreive S3 credentials from endpoint, write to SSM parameter store
+        and return them."""
+        
+        s3_creds = self.get_creds(s3_endpoint, edl_username, edl_password)
+
+        ssm_client = boto3.client('ssm', region_name="us-west-2")
+        try:
+            response = ssm_client.put_parameter(
+                Name="s3_creds_key",
+                Description="Temporary SWOT S3 bucket key",
+                Value=s3_creds["accessKeyId"],
+                Type="SecureString",
+                KeyId="1416df6c-7a20-46a1-949d-d26975acfdd0",
+                Overwrite=True,
+                Tier="Standard"
+            )
+            response = ssm_client.put_parameter(
+                Name="s3_creds_secret",
+                Description="Temporary SWOT S3 bucket secret",
+                Value=s3_creds["secretAccessKey"],
+                Type="SecureString",
+                KeyId="1416df6c-7a20-46a1-949d-d26975acfdd0",
+                Overwrite=True,
+                Tier="Standard"
+            )
+            response = ssm_client.put_parameter(
+                Name="s3_creds_token",
+                Description="Temporary SWOT S3 bucket token",
+                Value=s3_creds["sessionToken"],
+                Type="SecureString",
+                KeyId="1416df6c-7a20-46a1-949d-d26975acfdd0",
+                Overwrite=True,
+                Tier="Standard"
+            )
+            response = ssm_client.put_parameter(
+                Name="s3_creds_expiration",
+                Description="Temporary SWOT S3 bucket expiration",
+                Value=s3_creds["expiration"],
+                Type="SecureString",
+                KeyId="1416df6c-7a20-46a1-949d-d26975acfdd0",
+                Overwrite=True,
+                Tier="Standard"
+            )
+        except botocore.exceptions.ClientError:
+            raise
+        else:
+            return s3_creds
 
     def login(self):
         """Log into Earthdata and set up request library to track cookies.
         
-        Raises an exception if can't authenticate with .netrc file.
+        Raises an exception if can't access SSM client.
         """
-
+        
         try:
-            username, _, password = netrc.netrc().authenticators(self.URS)
-        except (FileNotFoundError, TypeError):
-            raise Exception("ERROR: There not .netrc file or endpoint indicated in .netrc file.")
-
+            ssm_client = boto3.client('ssm', region_name="us-west-2")
+            username = ssm_client.get_parameter(Name="edl_username", WithDecryption=True)["Parameter"]["Value"]
+            password = ssm_client.get_parameter(Name="edl_password", WithDecryption=True)["Parameter"]["Value"]
+        except botocore.exceptions.ClientError as e:
+            raise e
+        
         # Create Earthdata authentication request
         manager = request.HTTPPasswordMgrWithDefaultRealm()
         manager.add_password(None, self.URS, username, password)
@@ -39,8 +119,10 @@ class S3List:
         # Define an opener to handle fetching auth request
         opener = request.build_opener(auth, processor)
         request.install_opener(opener)
+        
+        return username, password
 
-    def get_token(self, client_id, ip_address):
+    def get_token(self, client_id, ip_address, username, password):
         """Get CMR authentication token for searching records.
         
         Parameters
@@ -50,11 +132,6 @@ class S3List:
         ip_address: str
             client's IP address
         """
-
-        try:
-            username, _, password = netrc.netrc().authenticators(self.URS)
-        except (FileNotFoundError, TypeError) as error:
-            raise Exception("ERROR: There not .netrc file or endpoint indicated in .netrc file.")
 
         # Post a token request and return resonse
         token_url = f"https://{self.CMR}/legacy-services/rest/tokens"
@@ -96,25 +173,25 @@ class S3List:
         coll = res.json()
         return [url["URL"] for res in coll["items"] for url in res["umm"]["RelatedUrls"] if url["Type"] == "GET DATA VIA DIRECT ACCESS"]
     
-    def login_and_run_query(self, short_name, provider, temporal_range):
+    def login_and_run_query(self, short_name, provider, temporal_range, s3_endpoint):
         """Log into CMR and run query to retrieve a list of S3 URLs."""
 
         try:
             # Login and retrieve token
-            self.login()
+            username, password = self.login()
+            s3_creds = self.get_s3_creds(s3_endpoint, username, password)
             client_id = "podaac_cmr_client"
             hostname = gethostname()
             ip_addr = gethostbyname(hostname)
-            self.get_token(client_id, ip_addr)
+            self.get_token(client_id, ip_addr, username, password)
 
             # Run query
             s3_urls = self.run_query(short_name, provider, temporal_range)
-            s3_urls.sort()
 
             # Clean up and delete token
-            self.delete_token()            
+            self.delete_token()                    
         except Exception:
             raise
         else:
-            # Return list
-            return s3_urls
+            # Return list and s3 endpoint credentials
+            return s3_urls, s3_creds

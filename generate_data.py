@@ -52,55 +52,6 @@ def get_continent(index, json_file):
         data = json.load(jf)
     return list(data[i].keys())[0].upper()
 
-def get_s3_creds(provider):
-    """Retreive S3 credentials from endpoint, write to SSM parameter store
-    and return them."""
-
-    s3_creds = requests.get(conf["s3_cred_endpoints"][provider.lower()]).json()
-
-    ssm_client = boto3.client('ssm')
-    try:
-        response = ssm_client.put_parameter(
-            Name="s3_creds_key",
-            Description="Temporary SWOT S3 bucket key",
-            Value=s3_creds["accessKeyId"],
-            Type="SecureString",
-            KeyId="1416df6c-7a20-46a1-949d-d26975acfdd0",
-            Overwrite=True,
-            Tier="Standard"
-        )
-        response = ssm_client.put_parameter(
-            Name="s3_creds_secret",
-            Description="Temporary SWOT S3 bucket secret",
-            Value=s3_creds["secretAccessKey"],
-            Type="SecureString",
-            KeyId="1416df6c-7a20-46a1-949d-d26975acfdd0",
-            Overwrite=True,
-            Tier="Standard"
-        )
-        response = ssm_client.put_parameter(
-            Name="s3_creds_token",
-            Description="Temporary SWOT S3 bucket token",
-            Value=s3_creds["sessionToken"],
-            Type="SecureString",
-            KeyId="1416df6c-7a20-46a1-949d-d26975acfdd0",
-            Overwrite=True,
-            Tier="Standard"
-        )
-        response = ssm_client.put_parameter(
-            Name="s3_creds_expiration",
-            Description="Temporary SWOT S3 bucket expiration",
-            Value=s3_creds["expiration"],
-            Type="SecureString",
-            KeyId="1416df6c-7a20-46a1-949d-d26975acfdd0",
-            Overwrite=True,
-            Tier="Standard"
-        )
-    except botocore.exceptions.ClientError:
-        raise
-    else:
-        return s3_creds
-
 def extract_ids(shpfiles, creds):
     """Extract reach identifiers from shapefile names and return a list.
     
@@ -161,23 +112,14 @@ def run_aws(args, cont):
     print("Retrieving and storing list of S3 URIs.")
     s3_list = S3List()
     try:
-        s3_uris = s3_list.login_and_run_query(args.shortname, args.provider, args.temporalrange)
+        s3_endpoint = conf["s3_cred_endpoints"][args.provider.lower()]
+        s3_uris, s3_creds = s3_list.login_and_run_query(args.shortname, args.provider, args.temporalrange, s3_endpoint)
         s3_uris = list(filter(lambda uri, cont=cont: cont in uri, s3_uris))    # Filter for continent
         s3_uris.sort(key=sort_shapefiles)
         write_json(s3_uris, Path(args.directory).joinpath(conf["s3_list"]))
     except Exception as e:
         print(e)
         print("Error encountered. Exiting program.")
-        exit(1)
-
-    # Retrieve SWOT S3 bucket credentials
-    print("Retrieving and storing credentials.")
-    try:
-        s3_creds = get_s3_creds(args.provider)
-    except botocore.exceptions.ClientError as e:
-        print(e)
-        print("Could not store S3 credentials and will not be able to run input module.")
-        print("Program exiting.")
         exit(1)
 
     # Extract a list of reach identifiers

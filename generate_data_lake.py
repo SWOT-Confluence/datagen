@@ -61,7 +61,8 @@ def run_aws(args, cont):
     print("Retrieving and storing list of S3 URIs.")
     s3_list = S3List()
     try:
-        s3_uris = s3_list.login_and_run_query(args.shortname, args.provider, args.temporalrange)
+        s3_endpoint = conf["s3_cred_endpoints"][args.provider.lower()]
+        s3_uris, s3_creds = s3_list.login_and_run_query(args.shortname, args.provider, args.temporalrange, s3_endpoint)
         s3_uris = list(filter(lambda uri, cont=cont: cont in uri and 'Prior' in uri, s3_uris))    # Filter for continent
         s3_uris.sort(key=sort_shapefiles)
         s3_json = Path(args.directory).joinpath(conf["s3_list"])
@@ -72,7 +73,7 @@ def run_aws(args, cont):
         print("Error encountered. Exiting program.")
         exit(1)
         
-    return s3_uris
+    return s3_uris, s3_creds
 
 def run_local(args, cont):
     """Load shapefiles in from local file system and return reach identifiers."""
@@ -97,7 +98,7 @@ def run_lake(args):
     if args.local:
         shp_files = run_local(args, cont)
     else:
-        shp_files = run_aws(args, cont)
+        shp_files, s3_creds = run_aws(args, cont)
     
     # Create cycle pass data
     cycle_pass = CyclePass(shp_files)
@@ -110,10 +111,11 @@ def run_lake(args):
     write_json(pass_num, json_file)
     
     # Lake identifiers
-    lake = Lake(shp_files, "POCLOUD")
     if args.local:
+        lake = Lake(shp_files)
         lake_ids = lake.extract_local()
     else:
+        lake = Lake(shp_files, s3_creds)
         lake_ids = lake.extract_aws()
     json_file = Path(args.directory).joinpath(conf["lake"])
     print(f"Writing lake identifiers to: {json_file}")

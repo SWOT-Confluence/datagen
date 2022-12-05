@@ -28,15 +28,17 @@ class Lake:
         extracts reach identifier and maps to file name 
     """
 
-    def __init__(self, shapefiles, provider):
+    def __init__(self, shapefiles, creds=None):
         """
         Parameters
         ----------
-        reach_ids: List
-            List of reach identifierse
+        creds: dictionary
+            Dictionary of S3 endpoint credentials
+        shapefiles: list
+            List of SWOT lake shapefiles
         """
         
-        self.creds = requests.get(conf["s3_cred_endpoints"][provider.lower()]).json()
+        self.creds = creds
         self.lake_ids = []
         self.shapefiles = shapefiles
 
