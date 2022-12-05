@@ -23,7 +23,6 @@ Example: python3 generate_data.py -i 3 -p POCLOUD -s SWOT_SIMULATED_NA_CONTINENT
 """
 
 # Standard imports
-import argparse
 import json
 import os
 from pathlib import Path
@@ -39,50 +38,11 @@ import shapefile
 
 # Local imports
 from conf import conf
-from Basin import Basin
-from CyclePass import CyclePass
-from Reach import Reach
-from ReachNode import ReachNode
-from S3List import S3List
-
-def create_args():
-    """Create and return argparser with arguments."""
-
-    arg_parser = argparse.ArgumentParser(description="Retrieve a list of S3 URIs")
-    arg_parser.add_argument("-i",
-                            "--index",
-                            type=str,
-                            help="Index value to select continent to run on")
-    arg_parser.add_argument("-p",
-                            "--provider",
-                            type=str,
-                            help="The dataset or collection provider")
-    arg_parser.add_argument("-s",
-                            "--shortname",
-                            type=str,
-                            help="The collection shortname")
-    arg_parser.add_argument("-t",
-                            "--temporalrange",
-                            type=str,
-                            help="Temporal range to retrieve URIs for")
-    arg_parser.add_argument("-d",
-                            "--directory",
-                            type=str,
-                            help="Directory to save JSON data to")
-    arg_parser.add_argument("-j",
-                            "--jsonfile",
-                            type=str,
-                            help="Name of continent JSON file",
-                            default="continent.json")
-    arg_parser.add_argument("-l",
-                            "--local",
-                            help="Indicate local run",
-                            action="store_true")
-    arg_parser.add_argument("-f",
-                            "--shapefiledir",
-                            type=str,
-                            help="Directory of local shapefiles")
-    return arg_parser
+from datagen.Basin import Basin
+from datagen.CyclePass import CyclePass
+from datagen.Reach import Reach
+from datagen.ReachNode import ReachNode
+from datagen.S3List import S3List
 
 def get_continent(index, json_file):
     """Retrieve continent to run datagen operations for."""
@@ -263,12 +223,8 @@ def run_local(args, cont):
     write_json(shp_json, Path(args.directory).joinpath(conf["s3_list_local"]))
     return shp_files, reach_ids, node_ids
 
-def run():
+def run_river(args):
     """Execute the operations needed to generate JSON data."""
-
-    # Command line arguments
-    arg_parser = create_args()
-    args = arg_parser.parse_args()
     
     # Determine continent to run on
     cont = get_continent(args.index, Path(args.directory).joinpath(args.jsonfile))
@@ -320,6 +276,6 @@ def run():
 if __name__ == "__main__":
     import datetime
     start = datetime.datetime.now()
-    run()
+    run_river()
     end = datetime.datetime.now()
     print(f"Execution time: {end - start}")
