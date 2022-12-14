@@ -1,4 +1,4 @@
-""" Script to create sets for MetroMan, using the sets class
+""" Script to create sets for all algorithms, using the sets class
 """
 
 # Standard imports
@@ -39,7 +39,6 @@ def main():
 
     #get set
     Algorithms=['MetroMan','HiVDI']
-    SetData={}
     for Algorithm in Algorithms:
       SetData[Algorithm]={}
       print('Getting set for',Algorithm)
