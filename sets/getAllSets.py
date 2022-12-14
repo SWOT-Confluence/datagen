@@ -38,23 +38,33 @@ def main():
     sword_dataset=Dataset(swordfile)
 
     #get set
-    AlgorithmSet='MetroMan'
-    params = SetParameters(AlgorithmSet)
+    Algorithms=['MetroMan','HiVDI']
+    SetData={}
+    for Algorithm in Algorithms:
+      SetData[Algorithm]={}
+      print('Getting set for',Algorithm)
+      params = SetParameters(Algorithm)
+      print(params)
 
-    print(params)
+      algoset = sets(params,reaches,sword_dataset)
+      InversionSets=algoset.getsets()
 
-    metroset = sets(params,reaches,sword_dataset)
-    InversionSets=metroset.getsets()
-
-    # output to json file
-    metroset.write_inversion_set_data(InversionSets,OUTPUT_DIR)
+      # output to json file
+      algoset.write_inversion_set_data(InversionSets,OUTPUT_DIR)
 
 def SetParameters(algo):
     params={}
+    params['algo']=algo
     if algo == 'MetroMan':
         params['RequireIdenticalOrbits']=True
         params['DrainageAreaPctCutoff']=10.
         params['AllowRiverJunction']=False
+        params['Filename']='metrosets.json'
+    elif algo == 'HiVDI':
+        params['RequireIdenticalOrbits']=True
+        params['DrainageAreaPctCutoff']=30.
+        params['AllowRiverJunction']=False
+        params['Filename']='hivdisets.json'
     return params
 
 if __name__ == "__main__":

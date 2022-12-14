@@ -265,6 +265,7 @@ class sets:
         CL_RID=self.sword_dataset['nodes/reach_id'][:].filled(np.nan)
         px=self.sword_dataset['nodes/x'][:].filled(np.nan)
         py=self.sword_dataset['nodes/y'][:].filled(np.nan)
+ 
         df=pd.DataFrame(columns=["ID", "x",'y'])
         for key in IS:
             TS=IS[key]
@@ -303,12 +304,13 @@ class sets:
             folium.CircleMarker(([df["y"][pt],df["x"][pt]]), radius=3, weight=2, color=colors[cc], fill_color=colors[cc], fill_opacity=.5).add_to(mm)
 
         #save the map as an html    
-        mm.save('mymap.html')
-
-        webbrowser.open("mymap.html")
+        fname=self.params['algo'] + '.html'
+        mm.save(fname)
+        webbrowser.open(fname)
 
     def write_inversion_set_data(self,InversionSets,OutputDir):
-        out_json = OutputDir / "sets.json"
+        #out_json = OutputDir / "sets.json"
+        out_json = OutputDir / self.params['Filename']
 
         InversionSetsWrite=[]
         for IS in InversionSets:
@@ -352,7 +354,7 @@ class sets:
         plt.show()
 
         # map
-        #self.MKmap(InversionSets)
+        self.MKmap(InversionSets)
     
         return InversionSets
 
