@@ -89,8 +89,8 @@ class S3List:
                 Overwrite=True,
                 Tier="Standard"
             )
-        except botocore.exceptions.ClientError:
-            raise
+        except botocore.exceptions.ClientError as error:
+            raise error
         else:
             return s3_creds
 
@@ -104,8 +104,8 @@ class S3List:
             ssm_client = boto3.client('ssm', region_name="us-west-2")
             username = ssm_client.get_parameter(Name="edl_username", WithDecryption=True)["Parameter"]["Value"]
             password = ssm_client.get_parameter(Name="edl_password", WithDecryption=True)["Parameter"]["Value"]
-        except botocore.exceptions.ClientError as e:
-            raise e
+        except botocore.exceptions.ClientError as error:
+            raise error
         
         # Create Earthdata authentication request
         manager = request.HTTPPasswordMgrWithDefaultRealm()
@@ -189,9 +189,10 @@ class S3List:
             s3_urls = self.run_query(short_name, provider, temporal_range)
 
             # Clean up and delete token
-            self.delete_token()                    
-        except Exception:
-            raise
+            self.delete_token()
+                        
+        except Exception as error:
+            raise error
         else:
             # Return list and s3 endpoint credentials
             return s3_urls, s3_creds
