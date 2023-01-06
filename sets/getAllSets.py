@@ -8,6 +8,7 @@ import json
 
 # Third-party imports
 from netCDF4 import Dataset
+import numpy as np
 
 # Local imports
 from sets import sets
@@ -38,9 +39,10 @@ def main():
     sword_dataset=Dataset(swordfile)
 
     #get set
-    Algorithms=['MetroMan','HiVDI']
+    Algorithms=['MetroMan','HiVDI','SIC']
+    
     for Algorithm in Algorithms:
-      SetData[Algorithm]={}
+      #SetData[Algorithm]={}
       print('Getting set for',Algorithm)
       params = SetParameters(Algorithm)
       print(params)
@@ -59,11 +61,23 @@ def SetParameters(algo):
         params['DrainageAreaPctCutoff']=10.
         params['AllowRiverJunction']=False
         params['Filename']='metrosets.json'
+        params['MaximumReachesEachDirection']=2
+        params['MinimumReaches']=3
     elif algo == 'HiVDI':
-        params['RequireIdenticalOrbits']=True
+        params['RequireIdenticalOrbits']=False
         params['DrainageAreaPctCutoff']=30.
         params['AllowRiverJunction']=False
         params['Filename']='hivdisets.json'
+        params['MaximumReachesEachDirection']=np.inf
+        params['MinimumReaches']=1
+    elif algo == 'SIC':
+        params['RequireIdenticalOrbits']=False
+        params['DrainageAreaPctCutoff']=30.
+        params['AllowRiverJunction']=False
+        params['Filename']='hivdisets.json'
+        params['MaximumReachesEachDirection']=np.inf
+        params['MinimumReaches']=1
+ 
     return params
 
 if __name__ == "__main__":
