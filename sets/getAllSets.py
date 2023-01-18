@@ -26,8 +26,8 @@ def main():
         INPUT_DIR = Path("/mnt/data/input")
         OUTPUT_DIR = Path("/mnt/data/output")
     else:
-        INPUT_DIR = Path("/Users/mtd/Analysis/SWOT/Discharge/Confluence/verify/InversionSets/dev/")
-        OUTPUT_DIR = Path("/Users/mtd/Analysis/SWOT/Discharge/Confluence/verify/InversionSets/dev/")
+        INPUT_DIR = Path("/Users/mtd/Analysis/SWOT/Discharge/Confluence/verify/InversionSets/europe/")
+        OUTPUT_DIR = Path("/Users/mtd/Analysis/SWOT/Discharge/Confluence/verify/InversionSets/europe/")
 
     # read in file with all reaches to run
     reach_json=INPUT_DIR.joinpath('reaches.json')
@@ -35,7 +35,7 @@ def main():
         reaches = json.load(json_file)
 
     # read in sword file
-    swordfile=INPUT_DIR.joinpath('na_sword_v11.nc')
+    swordfile=INPUT_DIR.joinpath('eu_sword_v11.nc')
     sword_dataset=Dataset(swordfile)
 
     #get set

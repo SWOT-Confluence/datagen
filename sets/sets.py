@@ -34,6 +34,7 @@ class sets:
 
     def extract_data_sword_continent_file(self):
         swordreachids=self.sword_dataset["reaches/reach_id"][:]
+
         sword_data_continent={}
 
         # grab sizes of the data
@@ -52,7 +53,7 @@ class sets:
         # loop over all reaches and create a set for each
         InversionSets={}
         for reach in self.reaches:
-             #print('finding set for reach',reach['reach_id'])
+             print('finding set for reach',reach['reach_id'])
              k=np.argwhere(swordreachids == reach['reach_id'])
              k=k[0,0] # not sure why argwhere is returning this as a 2-d array. this seems inelegant
              sword_data_reach=self.pull_sword_attributes_for_reach(sword_data_continent,k)
