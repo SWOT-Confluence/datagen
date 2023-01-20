@@ -95,8 +95,7 @@ def run_aws(args, cont):
     s3_list = S3List()
     try:
         if args.simulated:
-            s3_creds = s3_list.get_creds_sim(args.ssmkey)
-            s3_uris = s3_list.get_s3_uris_sim(s3_creds)
+            s3_uris, s3_creds = s3_list.get_s3_uris_sim()
         else:
             s3_endpoint = conf["s3_cred_endpoints"][args.provider.lower()]
             s3_uris, s3_creds = s3_list.login_and_run_query(args.shortname, args.provider, args.temporalrange, s3_endpoint, args.ssmkey)

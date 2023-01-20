@@ -197,70 +197,23 @@ class S3List:
             # Return list and s3 endpoint credentials
             return s3_urls, s3_creds
         
-    def get_creds_sim(self, key):
-        """Return AWS credentials for environment that hosts simulated data."""
-        
-        # Retrieve temporary credentials
-        client = boto3.client('sts')
-        response = client.get_session_token()
-        creds = {
-            "accessKeyId": response["Credentials"]["AccessKeyId"],
-            "secretAccessKey": response["Credentials"]["SecretAccessKey"],
-            "sessionToken": response["Credentials"]["SessionToken"],
-            "expiration": response["Credentials"]["Expiration"].strftime("%Y-%m-%d %H:%M:%S+00:00")
-        }
-        
-        # Store temporary credentials in parameter store    
-        ssm_client = boto3.client('ssm', region_name="us-west-2")
-        try:
-            response = ssm_client.put_parameter(
-                Name="s3_creds_key",
-                Description="Temporary SWOT S3 bucket key",
-                Value=creds["accessKeyId"],
-                Type="SecureString",
-                KeyId=key,
-                Overwrite=True,
-                Tier="Standard"
-            )
-            response = ssm_client.put_parameter(
-                Name="s3_creds_secret",
-                Description="Temporary SWOT S3 bucket secret",
-                Value=creds["secretAccessKey"],
-                Type="SecureString",
-                KeyId=key,
-                Overwrite=True,
-                Tier="Standard"
-            )
-            response = ssm_client.put_parameter(
-                Name="s3_creds_token",
-                Description="Temporary SWOT S3 bucket token",
-                Value=creds["sessionToken"],
-                Type="SecureString",
-                KeyId=key,
-                Overwrite=True,
-                Tier="Standard"
-            )
-            response = ssm_client.put_parameter(
-                Name="s3_creds_expiration",
-                Description="Temporary SWOT S3 bucket expiration",
-                Value=creds["expiration"],
-                Type="SecureString",
-                KeyId=key,
-                Overwrite=True,
-                Tier="Standard"
-            )
-        except botocore.exceptions.ClientError:
-            raise
-        else:
-            return creds
-        
-    def get_s3_uris_sim(self, s3_creds):
+    def get_s3_uris_sim(self):
         """Get a list of S3 URIs for S3-hosted simulated data."""
         
+        # Get S3 credentials
+        ssm_client = boto3.client('ssm', region_name="us-west-2")
+        creds = {}
+        try:
+            creds["accessKeyId"] = ssm_client.get_parameter(Name="s3_creds_key", WithDecryption=True)["Parameter"]["Value"]
+            creds["secretAccessKey"] = ssm_client.get_parameter(Name="s3_creds_secret", WithDecryption=True)["Parameter"]["Value"]
+            creds["sessionToken"] = ssm_client.get_parameter(Name="s3_creds_token", WithDecryption=True)["Parameter"]["Value"]
+        except botocore.exceptions.ClientError as e:
+            raise e
+        
         s3 = boto3.client("s3",
-                          aws_access_key_id=s3_creds["accessKeyId"],
-                          aws_secret_access_key=s3_creds["secretAccessKey"],
-                          aws_session_token=s3_creds["sessionToken"])
+                          aws_access_key_id=creds["accessKeyId"],
+                          aws_secret_access_key=creds["secretAccessKey"],
+                          aws_session_token=creds["sessionToken"])
         try:
             response = s3.list_objects(
                 Bucket="confluence-swot",
@@ -269,4 +222,4 @@ class S3List:
         except botocore.exceptions.ClientError:
             raise
         
-        return [ f"s3://confluence-swot/{shapefile['Key']}" for shapefile in response["Contents"] ]
+        return [ f"s3://confluence-swot/{shapefile['Key']}" for shapefile in response["Contents"] ], creds
