@@ -15,7 +15,7 @@ from datagen.S3List import S3List
 def get_continent(index, json_file):
     """Retrieve continent to run datagen operations for."""
     
-    i = int(index) if index != "-235" else os.environ.get("AWS_BATCH_JOB_ARRAY_INDEX")
+    i = int(index) if index != -235 else int(os.environ.get("AWS_BATCH_JOB_ARRAY_INDEX"))
     with open(json_file) as jf:
         data = json.load(jf)
     return list(data[i].keys())[0].upper()
