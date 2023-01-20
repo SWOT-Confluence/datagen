@@ -2,24 +2,6 @@
 
 Also generates a list of S3 URIs for SWOT shapefiles. Accesses PO.DAAC CMR to
 generate a list.
-
-Requires .netrc file to log into CMR API and the AWS CLI tool configured with 
-credentials and region.
-
-Local execution option available, if you run locally, please place shapefiles in
-the --d or --directory referenced in command line arguments.
-
-Command line arguments:
- -i: index to locate continent in JSON file
- -s: short name of the collection
- -t: temporal range to retrieve S3 URIs
- -p: the collection provider name
- -d: where to locate and save JSON data
- -l: indicates local run (optional)
- -j: name of JSON file (optional)
- -s: name of shapefile directory for local runs (optional)
-
-Example: python3 generate_data.py -i 3 -p POCLOUD -s SWOT_SIMULATED_NA_CONTINENT_L2_HR_RIVERSP_V1 -t 2022-08-01T00:00:00Z,2022-08-22T23:59:59Z -d /home/useraccount/json_data
 """
 
 # Standard imports
@@ -112,9 +94,13 @@ def run_aws(args, cont):
     print("Retrieving and storing list of S3 URIs.")
     s3_list = S3List()
     try:
-        s3_endpoint = conf["s3_cred_endpoints"][args.provider.lower()]
-        s3_uris, s3_creds = s3_list.login_and_run_query(args.shortname, args.provider, args.temporalrange, s3_endpoint)
-        s3_uris = list(filter(lambda uri, cont=cont: cont in uri, s3_uris))    # Filter for continent
+        if args.simulated:
+            s3_creds = s3_list.get_creds_sim(args.ssmkey)
+            s3_uris = s3_list.get_s3_uris_sim(s3_creds)
+        else:
+            s3_endpoint = conf["s3_cred_endpoints"][args.provider.lower()]
+            s3_uris, s3_creds = s3_list.login_and_run_query(args.shortname, args.provider, args.temporalrange, s3_endpoint, args.ssmkey)
+            s3_uris = list(filter(lambda uri, cont=cont: cont in uri, s3_uris))    # Filter for continent
         s3_uris.sort(key=sort_shapefiles)
         write_json(s3_uris, Path(args.directory).joinpath(conf["s3_list"]))
     except Exception as e:

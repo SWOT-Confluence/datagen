@@ -1,6 +1,24 @@
 """
 Execute either river or lake input operations to create NetCDF files from
 SWOT shapefiles.
+
+Local execution option available, if you run locally, please place shapefiles in
+the --d or --directory referenced in command line arguments.
+
+Command line arguments:
+ -i: index to locate continent in JSON file
+ -s: short name of the collection
+ -t: temporal range to retrieve S3 URIs
+ -p: the collection provider name
+ -d: where to locate and save JSON data
+ -k : unique SSM encryption key identifier
+ -o: indicate run on simulated data (optional)
+ -l: indicates local run (optional)
+ -j: name of JSON file (optional)
+ -f: name of shapefile directory for local runs (optional)
+
+River Example: python3 generate.py -c river -i 3 -p POCLOUD -s SWOT_SIMULATED_NA_CONTINENT_L2_HR_RIVERSP_V1 -t 2022-08-01T00:00:00Z,2022-08-22T23:59:59Z -d /home/useraccount/json_data
+Lake Example: python3 generate.py -c lake -i 3 -p POCLOUD -s SWOT_SIMULATED_NA_CONTINENT_L2_HR_RIVERSP_V1 -t 2022-08-01T00:00:00Z,2022-08-22T23:59:59Z -d /home/useraccount/json_data
 """
 # Standard imports
 import argparse
@@ -45,6 +63,14 @@ def create_args():
                             type=str,
                             help="Name of continent JSON file",
                             default="continent.json")
+    arg_parser.add_argument("-k",
+                            "--ssmkey",
+                            type=str,
+                            help="Unique SSM encryption key identifier.")
+    arg_parser.add_argument("-o",
+                            "--simulated",
+                            help="Indication to run on simulated data",
+                            action="store_true")
     arg_parser.add_argument("-l",
                             "--local",
                             help="Indicate local run",
