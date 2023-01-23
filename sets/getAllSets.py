@@ -8,6 +8,7 @@ import json
 
 # Third-party imports
 from netCDF4 import Dataset
+import numpy as np
 
 # Local imports
 from sets import sets
@@ -25,8 +26,8 @@ def main():
         INPUT_DIR = Path("/mnt/data/input")
         OUTPUT_DIR = Path("/mnt/data/output")
     else:
-        INPUT_DIR = Path("/Users/mtd/Analysis/SWOT/Discharge/Confluence/verify/InversionSets/dev/")
-        OUTPUT_DIR = Path("/Users/mtd/Analysis/SWOT/Discharge/Confluence/verify/InversionSets/dev/")
+        INPUT_DIR = Path("/Users/mtd/Analysis/SWOT/Discharge/Confluence/verify/InversionSets/europe/")
+        OUTPUT_DIR = Path("/Users/mtd/Analysis/SWOT/Discharge/Confluence/verify/InversionSets/europe/")
 
     # read in file with all reaches to run
     reach_json=INPUT_DIR.joinpath('reaches.json')
@@ -34,13 +35,14 @@ def main():
         reaches = json.load(json_file)
 
     # read in sword file
-    swordfile=INPUT_DIR.joinpath('na_sword_v11.nc')
+    swordfile=INPUT_DIR.joinpath('eu_sword_v11.nc')
     sword_dataset=Dataset(swordfile)
 
     #get set
-    Algorithms=['MetroMan','HiVDI']
+    Algorithms=['MetroMan','HiVDI','SIC']
+    
     for Algorithm in Algorithms:
-      SetData[Algorithm]={}
+      #SetData[Algorithm]={}
       print('Getting set for',Algorithm)
       params = SetParameters(Algorithm)
       print(params)
@@ -59,11 +61,23 @@ def SetParameters(algo):
         params['DrainageAreaPctCutoff']=10.
         params['AllowRiverJunction']=False
         params['Filename']='metrosets.json'
+        params['MaximumReachesEachDirection']=2
+        params['MinimumReaches']=3
     elif algo == 'HiVDI':
-        params['RequireIdenticalOrbits']=True
+        params['RequireIdenticalOrbits']=False
         params['DrainageAreaPctCutoff']=30.
         params['AllowRiverJunction']=False
         params['Filename']='hivdisets.json'
+        params['MaximumReachesEachDirection']=np.inf
+        params['MinimumReaches']=1
+    elif algo == 'SIC':
+        params['RequireIdenticalOrbits']=False
+        params['DrainageAreaPctCutoff']=30.
+        params['AllowRiverJunction']=False
+        params['Filename']='hivdisets.json'
+        params['MaximumReachesEachDirection']=np.inf
+        params['MinimumReaches']=1
+ 
     return params
 
 if __name__ == "__main__":

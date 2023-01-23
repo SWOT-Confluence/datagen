@@ -34,6 +34,7 @@ class sets:
 
     def extract_data_sword_continent_file(self):
         swordreachids=self.sword_dataset["reaches/reach_id"][:]
+
         sword_data_continent={}
 
         # grab sizes of the data
@@ -52,7 +53,7 @@ class sets:
         # loop over all reaches and create a set for each
         InversionSets={}
         for reach in self.reaches:
-             #print('finding set for reach',reach['reach_id'])
+             print('finding set for reach',reach['reach_id'])
              k=np.argwhere(swordreachids == reach['reach_id'])
              k=k[0,0] # not sure why argwhere is returning this as a 2-d array. this seems inelegant
              sword_data_reach=self.pull_sword_attributes_for_reach(sword_data_continent,k)
@@ -114,7 +115,7 @@ class sets:
                 InversionSet['Reaches'][sword_data_reach_up['reach_id']]=sword_data_reach_up
                 InversionSet['UpstreamReach']=sword_data_reach_up
                 n_up_add+=1
-                if n_up_add == 3:
+                if n_up_add > self.params['MaximumReachesEachDirection']:
                     UpstreamReachIsValid=False
 
         # 3. check whether we can expand downstream. keep going downstream until we hit an invalid reach
@@ -129,7 +130,7 @@ class sets:
                 InversionSet['Reaches'][sword_data_reach_dn['reach_id']]=sword_data_reach_dn
                 InversionSet['DownstreamReach']=sword_data_reach_dn
                 n_dn_add+=1
-                if n_dn_add == 3:
+                if n_dn_add > self.params['MaximumReachesEachDirection']:
                     DownstreamReachIsValid=False
 
         return InversionSet
@@ -146,8 +147,6 @@ class sets:
         if sword_data_reach['swot_obs']==sword_data_reach_adjacent['swot_obs']:
             OrbitsAreIdentical=list(sword_data_reach['swot_orbits'])==list(sword_data_reach_adjacent['swot_orbits'])
         AccumulationAreaDifferencePct=(sword_data_reach_adjacent['facc']-sword_data_reach['facc'])/sword_data_reach['facc']*100
-
-        #PctCutoff=10.
 
         if direction == 'up':
             RiverJunctionPresent=sword_data_reach['n_rch_up']>1
@@ -169,18 +168,12 @@ class sets:
         if not AdjacentReachInReaches:
             ReachesMakeAValidSet=False
      
-#        if OrbitsAreIdentical and AccumulationAreaDifferencePct < PctCutoff and not RiverJunctionPresent and AdjacentReachInReaches:
-#            ReachesMakeAValidSet=True
-#        else:
-#            ReachesMakeAValidSet=False
-
         if verbose:
             print('reach:',sword_data_reach)
             print('adjacent reach:',sword_data_reach_adjacent)
             print('drainage area pct diff:',AccumulationAreaDifferencePct)
             print('same swot coverage as adjacent reach',OrbitsAreIdentical)
             print('there is a river junction present:',RiverJunctionPresent)
-
             print('These reaches are a valid set:',ReachesMakeAValidSet)
 
         return ReachesMakeAValidSet
@@ -254,9 +247,22 @@ class sets:
 
        reaches=list(InversionSets.keys())
 
+       # first simply remove any reach that has fewer than the minimum
        for reach in reaches:
-           if InversionSets[reach]['numReaches'] < 3:
+           if InversionSets[reach]['numReaches'] < self.params['MinimumReaches']:
                del InversionSets[reach]
+
+       # second, if it's a one-reach-set, remove if the reach exists in another set
+       reaches=list(InversionSets.keys())
+       SetsToRemove=[]
+       for reach in reaches:
+          if InversionSets[reach]['numReaches'] == 1:
+              for otherreach in reaches:
+                  if otherreach != reach and reach in InversionSets[otherreach]['ReachList']: 
+                      SetsToRemove.append(reach)
+
+       for reach in SetsToRemove:
+          del InversionSets[reach] 
 
        return InversionSets
 
@@ -327,6 +333,20 @@ class sets:
         with open(out_json, 'w') as json_file:
             json.dump(InversionSetsWrite, json_file, indent=2)
 
+    def print_stats(self,InversionSets):
+        # output some stats
+        numReaches=[]
+        for set in InversionSets:
+            #print(InversionSets[set]['ReachList'])
+            numReaches.append(InversionSets[set]['numReaches'])
+        print('histogram of number of reaches in set')
+        plt.hist(numReaches)
+        plt.show()
+
+        print('total number of reaches:',len(self.reaches))
+        print('A total of', len(InversionSets.keys()),'sets were identified.')
+        print('Total reaches included in sets:',sum(numReaches))
+
     def getsets(self):
         # extract continent data into dict
         swordreachids,sword_data_continent=self.extract_data_sword_continent_file()
@@ -343,15 +363,8 @@ class sets:
         # remove sets with too few reaches
         InversionSets=self.remove_small_sets(InversionSets)
 
-        # output some stats
-        print('A total of', len(InversionSets.keys()),'sets were identified.')
-        numReaches=[]
-        for set in InversionSets:
-            #print(InversionSets[set]['ReachList'])
-            numReaches.append(InversionSets[set]['numReaches'])
-        print('histogram of number of reaches in set')
-        plt.hist(numReaches)
-        plt.show()
+        # stats
+        self.print_stats(InversionSets)
 
         # map
         self.MKmap(InversionSets)
