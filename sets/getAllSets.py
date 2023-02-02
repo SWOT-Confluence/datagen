@@ -34,24 +34,29 @@ def main():
     with open(reach_json) as json_file:
         reaches = json.load(json_file)
 
+    # figure out which sword file to read
+    swordfile=reaches[0]['sword']
+
     # read in sword file
-    swordfile=INPUT_DIR.joinpath('eu_sword_v11.nc')
-    sword_dataset=Dataset(swordfile)
+    swordfilepath=INPUT_DIR.joinpath(swordfile)
+    sword_dataset=Dataset(swordfilepath)
 
     #get set
     Algorithms=['MetroMan','HiVDI','SIC']
     
     for Algorithm in Algorithms:
-      #SetData[Algorithm]={}
-      print('Getting set for',Algorithm)
-      params = SetParameters(Algorithm)
-      print(params)
+        print('Getting set for',Algorithm)
+        params = SetParameters(Algorithm)
+        print(params)
 
-      algoset = sets(params,reaches,sword_dataset)
-      InversionSets=algoset.getsets()
+        algoset = sets(params,reaches,sword_dataset)
+        InversionSets=algoset.getsets()
 
-      # output to json file
-      algoset.write_inversion_set_data(InversionSets,OUTPUT_DIR)
+        # output to json file
+        algoset.write_inversion_set_data(InversionSets,OUTPUT_DIR)
+
+    #close sword dataset
+    sword_dataset.close()  
 
 def SetParameters(algo):
     params={}

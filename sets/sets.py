@@ -347,8 +347,11 @@ class sets:
         webbrowser.open(fname)
 
     def write_inversion_set_data(self,InversionSets,OutputDir):
-        #out_json = OutputDir / "sets.json"
         out_json = OutputDir / self.params['Filename']
+
+        # these should be the same for each reach in the reaches file
+        swordfile=self.reaches[0]['sword']
+        sosfile=self.reaches[0]['sos']
 
         InversionSetsWrite=[]
         for IS in InversionSets:
@@ -356,9 +359,11 @@ class sets:
              for reach in InversionSets[IS]['ReachList']:
                  reachdict={}
                  reachdict['reach_id']=int(reach)
-                 reachdict['sword']='eu_sword_v11.nc'
+                 #reachdict['sword']='eu_sword_v11.nc'
+                 reachdict['sword']=swordfile
                  reachdict['swot']=str(reach) + '_SWOT.nc'
-                 reachdict['sos']='eu_sword_v11_SOS_priors.nc'
+                 #reachdict['sos']='eu_sword_v11_SOS_priors.nc'
+                 reachdict['sos']=sosfile
                  InversionSetWrite.append(reachdict)
              InversionSetsWrite.append(InversionSetWrite)
 
