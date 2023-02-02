@@ -52,13 +52,20 @@ class sets:
     def extract_inversion_sets_by_reach(self,sword_data_continent,swordreachids):
         # loop over all reaches and create a set for each
         InversionSets={}
+        nreach=len(self.reaches)
+        count=0
         for reach in self.reaches:
-             print('finding set for reach',reach['reach_id'])
+             count+=1  
+             #print('finding set for reach',reach['reach_id'])
+             #if count % 100 == 0:
+             #    print('Processing reach ',count,'/',nreach)
              k=np.argwhere(swordreachids == reach['reach_id'])
              k=k[0,0] # not sure why argwhere is returning this as a 2-d array. this seems inelegant
              sword_data_reach=self.pull_sword_attributes_for_reach(sword_data_continent,k)
-             InversionSet=self.find_set_for_reach(sword_data_reach,swordreachids,sword_data_continent)
-             InversionSet['ReachList'],InversionSet['numReaches']=self.get_reach_list(InversionSet)
+
+             if sword_data_reach['n_rch_up']==1:
+                 InversionSet=self.find_set_for_reach(sword_data_reach,swordreachids,sword_data_continent)
+                 InversionSet['ReachList'],InversionSet['numReaches']=self.get_reach_list(InversionSet)
 
              InversionSets[reach['reach_id']]=InversionSet
 
@@ -104,7 +111,7 @@ class sets:
         while UpstreamReachIsValid:
             kup=np.argwhere(swordreachids == InversionSet['UpstreamReach']['rch_id_up'])
 
-            if len(kup)==0:
+            if len(kup)!=1:
                   UpstreamReachIsValid=False
             else:
                   kup=kup[0,0]
@@ -123,15 +130,19 @@ class sets:
         n_dn_add=0
         while DownstreamReachIsValid:
             kdn=np.argwhere(swordreachids == InversionSet['DownstreamReach']['rch_id_dn'])
-            kdn=kdn[0,0]
-            sword_data_reach_dn=self.pull_sword_attributes_for_reach(sword_data_continent,kdn)
-            DownstreamReachIsValid=self.CheckReaches(sword_data_reach,sword_data_reach_dn,'down',CheckVerbosity)
-            if DownstreamReachIsValid:
-                InversionSet['Reaches'][sword_data_reach_dn['reach_id']]=sword_data_reach_dn
-                InversionSet['DownstreamReach']=sword_data_reach_dn
-                n_dn_add+=1
-                if n_dn_add > self.params['MaximumReachesEachDirection']:
-                    DownstreamReachIsValid=False
+
+            if len(kdn)!=1:
+                DownstreamReachIsValid=False
+            else:
+                kdn=kdn[0,0]
+                sword_data_reach_dn=self.pull_sword_attributes_for_reach(sword_data_continent,kdn)
+                DownstreamReachIsValid=self.CheckReaches(sword_data_reach,sword_data_reach_dn,'down',CheckVerbosity)
+                if DownstreamReachIsValid:
+                    InversionSet['Reaches'][sword_data_reach_dn['reach_id']]=sword_data_reach_dn
+                    InversionSet['DownstreamReach']=sword_data_reach_dn
+                    n_dn_add+=1
+                    if n_dn_add > self.params['MaximumReachesEachDirection']:
+                        DownstreamReachIsValid=False
 
         return InversionSet
 
@@ -148,15 +159,10 @@ class sets:
             OrbitsAreIdentical=list(sword_data_reach['swot_orbits'])==list(sword_data_reach_adjacent['swot_orbits'])
         AccumulationAreaDifferencePct=(sword_data_reach_adjacent['facc']-sword_data_reach['facc'])/sword_data_reach['facc']*100
 
-        if direction == 'up':
-            RiverJunctionPresent=sword_data_reach['n_rch_up']>1
-        else:
-            RiverJunctionPresent=False
-
-        if direction == 'down':
-            RiverJunctionPresent=sword_data_reach['n_rch_down']>1
-        else:
-            RiverJunctionPresent=False
+        RiverJunctionPresent=False
+        if sword_data_reach['n_rch_up'] > 1 or sword_data_reach['n_rch_down']>1  \
+             or sword_data_reach_adjacent['n_rch_up'] > 1 or sword_data_reach_adjacent['n_rch_down']>1:
+            RiverJunctionPresent=True
 
         ReachesMakeAValidSet=True
         if self.params['RequireIdenticalOrbits'] and not OrbitsAreIdentical:
@@ -193,9 +199,15 @@ class sets:
              # sort the list of reach ids
              while not EndOfSetReached:
                  CurrentEndOfSet=ReachList[-1]
-                 next_reach_id_downstream=InversionSet['Reaches'][CurrentEndOfSet]['rch_id_dn'][0]
-                 ReachList.append(next_reach_id_downstream)
-                 EndOfSetReached=ReachList[-1]==InversionSet['DownstreamReach']['reach_id']
+                 try: 
+                     #can reach here when there are SWORD topological inconsistencies
+                     next_reach_id_downstream=InversionSet['Reaches'][CurrentEndOfSet]['rch_id_dn'][0]
+                 except:
+                     EndOfSetReached=True                     
+
+                 if not EndOfSetReached:
+                     ReachList.append(next_reach_id_downstream)
+                     EndOfSetReached=ReachList[-1]==InversionSet['DownstreamReach']['reach_id']
 
              numReaches=len(ReachList)
 
@@ -203,26 +215,42 @@ class sets:
 
     def remove_duplicate_sets(self,InversionSets):
 
-       FoundDuplicate=True
+        # the original thing i wrote was too slow and klugey. the revised one is better
 
-       while FoundDuplicate:
+       #FoundDuplicate=True
 
-           reaches=list(InversionSets.keys())
-           reach_combos=list(itertools.combinations(reaches, 2))
+#       while FoundDuplicate:
+#
+#           reaches=list(InversionSets.keys())
+#           reach_combos=list(itertools.combinations(reaches, 2))
+#
+#           for combo in reach_combos:
+#                if InversionSets[combo[0]]['ReachList']==InversionSets[combo[1]]['ReachList']:
+#                     del InversionSets[combo[1]]
+#                     break
+#                if combo==reach_combos[-1]:
+#                     FoundDuplicate=False
 
-           for combo in reach_combos:
-                if InversionSets[combo[0]]['ReachList']==InversionSets[combo[1]]['ReachList']:
-                     del InversionSets[combo[1]]
-                     break
-                if combo==reach_combos[-1]:
-                     FoundDuplicate=False
+       #via https://www.geeksforgeeks.org/python-remove-duplicate-values-in-dictionary/
+       print('starting with ', len(InversionSets),'sets')
+       temp = []
+       res = dict()
+       for key, val in InversionSets.items():
+           if val not in temp:
+               temp.append(val)
+               res[key] = val
+       print('after removing duplicates there are ', len(res),'sets')
+       #res
 
-       return InversionSets
+       #return InversionSets
+       return res
 
     def remove_sets_with_non_river_reaches(self,InversionSets):
 
        nsets=len(InversionSets)
        SetIsBad={}
+
+       iscount=0
 
        for IS in InversionSets:
             ContainsNonRiverReach=False
@@ -261,7 +289,11 @@ class sets:
                   if otherreach != reach and reach in InversionSets[otherreach]['ReachList']: 
                       SetsToRemove.append(reach)
 
+       # remove duplicates
+       SetsToRemove=list(set(SetsToRemove))
+
        for reach in SetsToRemove:
+          #print('removing',reach)
           del InversionSets[reach] 
 
        return InversionSets
@@ -324,9 +356,9 @@ class sets:
              for reach in InversionSets[IS]['ReachList']:
                  reachdict={}
                  reachdict['reach_id']=int(reach)
-                 reachdict['sword']='na_sword_v11.nc'
+                 reachdict['sword']='eu_sword_v11.nc'
                  reachdict['swot']=str(reach) + '_SWOT.nc'
-                 reachdict['sos']='na_sword_v11_SOS.nc'
+                 reachdict['sos']='eu_sword_v11_SOS_priors.nc'
                  InversionSetWrite.append(reachdict)
              InversionSetsWrite.append(InversionSetWrite)
 
@@ -349,25 +381,31 @@ class sets:
 
     def getsets(self):
         # extract continent data into dict
+        print('extracting data...')
         swordreachids,sword_data_continent=self.extract_data_sword_continent_file()
 
         # get an inversion set for each reach
+        print('getting inversion set for each reach...')
         InversionSets=self.extract_inversion_sets_by_reach(sword_data_continent,swordreachids)
 
         # remove duplicate sets
+        print('removing duplicate sets...')
         InversionSets=self.remove_duplicate_sets(InversionSets)
 
         # remove sets with non-river reaches
+        print('removing sets with non-river reaches...')
         InversionSets=self.remove_sets_with_non_river_reaches(InversionSets)
 
         # remove sets with too few reaches
+        print('removing sets with too few reaches...')
         InversionSets=self.remove_small_sets(InversionSets)
 
         # stats
+        print('print stats...')
         self.print_stats(InversionSets)
 
         # map
-        self.MKmap(InversionSets)
+        #self.MKmap(InversionSets)
     
         return InversionSets
 
