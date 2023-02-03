@@ -42,7 +42,9 @@ def main():
     sword_dataset=Dataset(swordfilepath)
 
     #get set
-    Algorithms=['MetroMan','HiVDI','SIC']
+    #Algorithms=['MetroMan','HiVDI','SIC']
+    Algorithms=['HiVDI']
+    #Algorithms=['MetroMan','HiVDI']
     
     for Algorithm in Algorithms:
         print('Getting set for',Algorithm)
@@ -68,6 +70,7 @@ def SetParameters(algo):
         params['Filename']='metrosets.json'
         params['MaximumReachesEachDirection']=2
         params['MinimumReaches']=3
+        params['AllowedReachOverlap']=-1 # specify -1 to just remove duplicates
     elif algo == 'HiVDI':
         params['RequireIdenticalOrbits']=False
         params['DrainageAreaPctCutoff']=30.
@@ -75,6 +78,7 @@ def SetParameters(algo):
         params['Filename']='hivdisets.json'
         params['MaximumReachesEachDirection']=np.inf
         params['MinimumReaches']=1
+        params['AllowedReachOverlap']=.5
     elif algo == 'SIC':
         params['RequireIdenticalOrbits']=False
         params['DrainageAreaPctCutoff']=30.
@@ -82,6 +86,7 @@ def SetParameters(algo):
         params['Filename']='hivdisets.json'
         params['MaximumReachesEachDirection']=np.inf
         params['MinimumReaches']=1
+        params['AllowedReachOverlap']=.67
  
     return params
 
