@@ -215,23 +215,7 @@ class sets:
 
     def remove_duplicate_sets(self,InversionSets):
 
-        # the original thing i wrote was too slow and klugey. the revised one is better
-
-       #FoundDuplicate=True
-
-#       while FoundDuplicate:
-#
-#           reaches=list(InversionSets.keys())
-#           reach_combos=list(itertools.combinations(reaches, 2))
-#
-#           for combo in reach_combos:
-#                if InversionSets[combo[0]]['ReachList']==InversionSets[combo[1]]['ReachList']:
-#                     del InversionSets[combo[1]]
-#                     break
-#                if combo==reach_combos[-1]:
-#                     FoundDuplicate=False
-
-       #via https://www.geeksforgeeks.org/python-remove-duplicate-values-in-dictionary/
+       #adapted from https://www.geeksforgeeks.org/python-remove-duplicate-values-in-dictionary/
        print('starting with ', len(InversionSets),'sets')
        temp = []
        res = dict()
@@ -240,10 +224,49 @@ class sets:
                temp.append(val)
                res[key] = val
        print('after removing duplicates there are ', len(res),'sets')
-       #res
 
-       #return InversionSets
        return res
+ 
+    def remove_high_overlap_sets(self,InversionSets):
+        HighOverlap=True
+        itercount=0
+
+        maxiter=5000
+
+        print('starting with ',len(InversionSets),' sets')
+
+        while HighOverlap:
+            itercount+=1
+            if itercount % 10 == 0:
+                print('.... iteration #',itercount, 'out of max,', maxiter)
+
+            reaches=list(InversionSets.keys())
+            reach_combos=list(itertools.combinations(reaches,2))
+
+            ncombos=len(reach_combos)
+            #print('there are ',ncombos,'combinations')
+ 
+            nremoved=0
+            for combo in reach_combos:
+                is0=InversionSets[combo[0]]['ReachList']
+                is1=InversionSets[combo[1]]['ReachList']
+                overlap = list( set(is0) & set(is1))
+                pctoverlap= len(overlap) / ( (len(is0) + len(is1))/2 )
+ 
+                #if pctoverlap > 0.67:
+                if pctoverlap > self.params['AllowedReachOverlap']:
+                    #print('removing set with overlap=',pctoverlap,'for',combo[1])
+                    nremoved+=1
+                    del InversionSets[combo[1]]
+                    break
+                if combo==reach_combos[-1]:
+                    HighOverlap=False
+
+            if itercount>maxiter or nremoved == 0:
+                HighOverlap=False
+
+        return InversionSets
+
 
     def remove_sets_with_non_river_reaches(self,InversionSets):
 
@@ -394,8 +417,10 @@ class sets:
         InversionSets=self.extract_inversion_sets_by_reach(sword_data_continent,swordreachids)
 
         # remove duplicate sets
-        print('removing duplicate sets...')
+        print('removing overlapping sets...')
         InversionSets=self.remove_duplicate_sets(InversionSets)
+        if self.params['AllowedReachOverlap'] > 0.:
+            InversionSets=self.remove_high_overlap_sets(InversionSets)
 
         # remove sets with non-river reaches
         print('removing sets with non-river reaches...')
