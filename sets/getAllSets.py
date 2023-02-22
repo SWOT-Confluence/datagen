@@ -20,17 +20,20 @@ def main():
         index_to_run=int(sys.argv[1]) #integer
     except IndexError:
         index_to_run=-235
+        
+    #other commandline arguments
+    continent=sys.argv[2]
 
     #data directories
     if index_to_run == -235:
-        INPUT_DIR = Path("/mnt/data/input")
-        OUTPUT_DIR = Path("/mnt/data/output")
+        INPUT_DIR = Path("/mnt/data")
+        OUTPUT_DIR = Path("/mnt/data")
     else:
         INPUT_DIR = Path("/Users/mtd/Analysis/SWOT/Discharge/Confluence/verify/InversionSets/europe/")
         OUTPUT_DIR = Path("/Users/mtd/Analysis/SWOT/Discharge/Confluence/verify/InversionSets/europe/")
 
     # read in file with all reaches to run
-    reach_json=INPUT_DIR.joinpath('reaches.json')
+    reach_json=INPUT_DIR.joinpath(f"reaches_{continent.lower()}.json")
     with open(reach_json) as json_file:
         reaches = json.load(json_file)
 
@@ -38,17 +41,17 @@ def main():
     swordfile=reaches[0]['sword']
 
     # read in sword file
-    swordfilepath=INPUT_DIR.joinpath(swordfile)
+    swordfilepath=INPUT_DIR.joinpath(swordfile) if index_to_run != -235 else INPUT_DIR.joinpath("sword", swordfile)
     sword_dataset=Dataset(swordfilepath)
 
     #get set
-    #Algorithms=['MetroMan','HiVDI','SIC']
-    Algorithms=['HiVDI']
-    #Algorithms=['MetroMan','HiVDI']
+    Algorithms=['MetroMan','HiVDI','SIC']
+    # Algorithms=['HiVDI']
+    # Algorithms=['MetroMan','HiVDI']
     
     for Algorithm in Algorithms:
         print('Getting set for',Algorithm)
-        params = SetParameters(Algorithm)
+        params = SetParameters(Algorithm, continent)
         print(params)
 
         algoset = sets(params,reaches,sword_dataset)
@@ -60,23 +63,23 @@ def main():
     #close sword dataset
     sword_dataset.close()  
 
-def SetParameters(algo):
+def SetParameters(algo, cont):
     params={}
     params['algo']=algo
     if algo == 'MetroMan':
         params['RequireIdenticalOrbits']=True
         params['DrainageAreaPctCutoff']=10.
         params['AllowRiverJunction']=False
-        params['Filename']='metrosets.json'
+        params['Filename']=f'metrosets_{cont}.json'
         params['MaximumReachesEachDirection']=2
         params['MinimumReaches']=3
         params['AllowedReachOverlap']=-1 # specify -1 to just remove duplicates
-        params['']
+        # params['']
     elif algo == 'HiVDI':
         params['RequireIdenticalOrbits']=False
         params['DrainageAreaPctCutoff']=30.
         params['AllowRiverJunction']=False
-        params['Filename']='hivdisets.json'
+        params['Filename']=f'hivdisets_{cont}.json'
         params['MaximumReachesEachDirection']=np.inf
         params['MinimumReaches']=1
         params['AllowedReachOverlap']=.5
@@ -84,7 +87,7 @@ def SetParameters(algo):
         params['RequireIdenticalOrbits']=False
         params['DrainageAreaPctCutoff']=30.
         params['AllowRiverJunction']=False
-        params['Filename']='hivdisets.json'
+        params['Filename']=f'sicsets_{cont}.json'
         params['MaximumReachesEachDirection']=np.inf
         params['MinimumReaches']=1
         params['AllowedReachOverlap']=.67

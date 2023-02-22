@@ -14,5 +14,5 @@ conf = {
         'gesdisc':'https://data.gesdisc.earthdata.nasa.gov/s3credentials'
     },
     "sos_suffix": "sword_v11_SOS_priors.nc",
-    "sword_suffix": "sword_v11",
+    "sword_suffix": "sword_v11.nc",
 }
