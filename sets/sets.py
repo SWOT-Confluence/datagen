@@ -13,7 +13,7 @@ import pandas as pd
 import random
 import webbrowser
 
-class sets:
+class Sets:
     """ Divide a list of reaches into inversion sets.
 
     Attributes

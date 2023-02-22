@@ -25,6 +25,7 @@ from datagen.CyclePass import CyclePass
 from datagen.Reach import Reach
 from datagen.ReachNode import ReachNode
 from datagen.S3List import S3List
+from sets.getAllSets import main
 
 def get_continent(index, json_file):
     """Retrieve continent to run datagen operations for."""
@@ -207,7 +208,11 @@ def run_river(args):
     reach_node_data = reach_node.extract_data()
     json_file = Path(args.directory).joinpath(update_json_filename(conf["reach_node"], cont))
     print(f"Writing reach node data to: {json_file}")
-    write_json(reach_node_data, json_file)    
+    write_json(reach_node_data, json_file)   
+    
+    # Create sets 
+    print("Retrieving set data.")
+    main(args, cont)
 
 if __name__ == "__main__":
     import datetime

@@ -11,18 +11,25 @@ from netCDF4 import Dataset
 import numpy as np
 
 # Local imports
-from sets import sets
+try:
+    from sets import Sets
+except ImportError:
+    from sets.sets import Sets
 
-def main():
+def main(args=None, continent=None):
 
     #context
-    try:
-        index_to_run=int(sys.argv[1]) #integer
-    except IndexError:
-        index_to_run=-235
-        
-    #other commandline arguments
-    continent=sys.argv[2]
+    if len(sys.argv) <= 2:
+        try:
+            index_to_run=int(sys.argv[1]) #integer
+        except IndexError:
+            index_to_run=-235
+            
+        #other commandline arguments
+        continent=sys.argv[2]
+    else:
+        index_to_run=args.index
+        continent=continent
 
     #data directories
     if index_to_run == -235:
@@ -54,7 +61,7 @@ def main():
         params = SetParameters(Algorithm, continent)
         print(params)
 
-        algoset = sets(params,reaches,sword_dataset)
+        algoset = Sets(params,reaches,sword_dataset)
         InversionSets=algoset.getsets()
 
         # output to json file
@@ -70,7 +77,7 @@ def SetParameters(algo, cont):
         params['RequireIdenticalOrbits']=True
         params['DrainageAreaPctCutoff']=10.
         params['AllowRiverJunction']=False
-        params['Filename']=f'metrosets_{cont}.json'
+        params['Filename']=f'metrosets_{cont.lower()}.json'
         params['MaximumReachesEachDirection']=2
         params['MinimumReaches']=3
         params['AllowedReachOverlap']=-1 # specify -1 to just remove duplicates
@@ -79,7 +86,7 @@ def SetParameters(algo, cont):
         params['RequireIdenticalOrbits']=False
         params['DrainageAreaPctCutoff']=30.
         params['AllowRiverJunction']=False
-        params['Filename']=f'hivdisets_{cont}.json'
+        params['Filename']=f'hivdisets_{cont.lower()}.json'
         params['MaximumReachesEachDirection']=np.inf
         params['MinimumReaches']=1
         params['AllowedReachOverlap']=.5
@@ -87,7 +94,7 @@ def SetParameters(algo, cont):
         params['RequireIdenticalOrbits']=False
         params['DrainageAreaPctCutoff']=30.
         params['AllowRiverJunction']=False
-        params['Filename']=f'sicsets_{cont}.json'
+        params['Filename']=f'sicsets_{cont.lower()}.json'
         params['MaximumReachesEachDirection']=np.inf
         params['MinimumReaches']=1
         params['AllowedReachOverlap']=.67
