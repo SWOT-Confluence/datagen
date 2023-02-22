@@ -216,7 +216,7 @@ class sets:
     def remove_duplicate_sets(self,InversionSets):
 
        #adapted from https://www.geeksforgeeks.org/python-remove-duplicate-values-in-dictionary/
-       print('starting with ', len(InversionSets),'sets')
+       print('... remove_duplicate_sets, starting with ', len(InversionSets),'sets')
        temp = []
        res = dict()
        for key, val in InversionSets.items():
@@ -231,14 +231,16 @@ class sets:
         HighOverlap=True
         itercount=0
 
-        maxiter=5000
+        #maxiter of 10 or 100 to debug. 10 takes 45 sec. 100 takes 3.5 minutes. 1e4 needed to generate good sets
+        #maxiter=10
+        maxiter=1e4
 
-        print('starting with ',len(InversionSets),' sets')
+        print('... remove_high_overlap_sets, starting with ',len(InversionSets),' sets')
 
         while HighOverlap:
             itercount+=1
             if itercount % 10 == 0:
-                print('.... iteration #',itercount, 'out of max,', maxiter)
+                print('.... iteration #',itercount, '; maximum is ', maxiter, ' iterations.')
 
             reaches=list(InversionSets.keys())
             reach_combos=list(itertools.combinations(reaches,2))
@@ -264,6 +266,44 @@ class sets:
 
             if itercount>maxiter or nremoved == 0:
                 HighOverlap=False
+
+        return InversionSets
+ 
+    def add_single_reach_sets(self,InversionSets,swordreachids,sword_data_continent):
+
+        #get all reaches currently in sets
+        reaches_in_sets=[]
+        for IS in InversionSets:
+            reach_list=InversionSets[IS]['ReachList']
+            for reach in reach_list:
+                reaches_in_sets.append(int(reach))
+ 
+        # get all reaches 
+        all_reaches=[]
+        for reach in self.reaches:
+             all_reaches.append(int(reach['reach_id']))
+
+        #get a list of reaches that are in all_reaches, but NOT in reaches_in_sets
+        excluded_reaches = list(set(all_reaches) - set(reaches_in_sets))
+
+        print('adding in ', len(excluded_reaches), ' single-set reaches')
+
+        #add all "excluded" reaches to InversionSets
+        for excluded_reach in excluded_reaches:
+            #print('adding ',excluded_reach)
+            InversionSet={}
+            InversionSet['ReachList']=[excluded_reach]
+            InversionSet['numReaches']=1
+            InversionSet['Reaches']={}
+
+            k=np.argwhere(swordreachids == np.int64(excluded_reach))
+            k=k[0,0] # not sure why argwhere is returning this as a 2-d array. this seems inelegant
+            sword_data_reach=self.pull_sword_attributes_for_reach(sword_data_continent,k)
+
+            InversionSet['Reaches'][excluded_reach]=sword_data_reach
+
+            #print(InversionSet)
+            InversionSets[excluded_reach]=InversionSet
 
         return InversionSets
 
@@ -382,10 +422,8 @@ class sets:
              for reach in InversionSets[IS]['ReachList']:
                  reachdict={}
                  reachdict['reach_id']=int(reach)
-                 #reachdict['sword']='eu_sword_v11.nc'
                  reachdict['sword']=swordfile
                  reachdict['swot']=str(reach) + '_SWOT.nc'
-                 #reachdict['sos']='eu_sword_v11_SOS_priors.nc'
                  reachdict['sos']=sosfile
                  InversionSetWrite.append(reachdict)
              InversionSetsWrite.append(InversionSetWrite)
@@ -421,6 +459,11 @@ class sets:
         InversionSets=self.remove_duplicate_sets(InversionSets)
         if self.params['AllowedReachOverlap'] > 0.:
             InversionSets=self.remove_high_overlap_sets(InversionSets)
+
+        # add single-reach sets to ensure all reaches are in a set (if specified in option)
+        if self.params['MinimumReaches']==1:
+            print('adding in single sets...')
+            InversionSets=self.add_single_reach_sets(InversionSets,swordreachids,sword_data_continent)
 
         # remove sets with non-river reaches
         print('removing sets with non-river reaches...')

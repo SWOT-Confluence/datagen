@@ -71,6 +71,7 @@ def SetParameters(algo):
         params['MaximumReachesEachDirection']=2
         params['MinimumReaches']=3
         params['AllowedReachOverlap']=-1 # specify -1 to just remove duplicates
+        params['']
     elif algo == 'HiVDI':
         params['RequireIdenticalOrbits']=False
         params['DrainageAreaPctCutoff']=30.
