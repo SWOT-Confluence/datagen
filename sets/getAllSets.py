@@ -2,6 +2,7 @@
 """
 
 # Standard imports
+import os
 import sys
 from pathlib import Path
 import json
@@ -28,28 +29,31 @@ def main(args=None, continent=None):
         #other commandline arguments
         continent=sys.argv[2]
     else:
-        index_to_run=args.index
+        index_to_run=int(args.index)
         continent=continent
+        
+    
 
     #data directories
-    if index_to_run == -235:
-        INPUT_DIR = Path("/mnt/data")
-        OUTPUT_DIR = Path("/mnt/data")
+    if index_to_run == -235 or len(os.environ.get("AWS_BATCH_JOB_ID")) > 0:
+        INPUT_DIR = Path("/data")
+        OUTPUT_DIR = Path("/data")
+        swordfilepath=INPUT_DIR.joinpath("sword")
     else:
         INPUT_DIR = Path("/Users/mtd/Analysis/SWOT/Discharge/Confluence/verify/InversionSets/europe/")
         OUTPUT_DIR = Path("/Users/mtd/Analysis/SWOT/Discharge/Confluence/verify/InversionSets/europe/")
+        swordfilepath=INPUT_DIR
 
     # read in file with all reaches to run
     reach_json=INPUT_DIR.joinpath(f"reaches_{continent.lower()}.json")
     with open(reach_json) as json_file:
         reaches = json.load(json_file)
-
+        
     # figure out which sword file to read
-    swordfile=reaches[0]['sword']
+    swordfile=swordfilepath.joinpath(reaches[0]['sword'])
 
     # read in sword file
-    swordfilepath=INPUT_DIR.joinpath(swordfile) if index_to_run != -235 else INPUT_DIR.joinpath("sword", swordfile)
-    sword_dataset=Dataset(swordfilepath)
+    sword_dataset=Dataset(swordfile)
 
     #get set
     Algorithms=['MetroMan','HiVDI','SIC']

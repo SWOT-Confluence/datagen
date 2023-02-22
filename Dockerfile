@@ -16,6 +16,7 @@ RUN /usr/local/bin/python -m venv /app/env \
 # Stage 5 - Copy and execute module
 # FROM stage3 as stage4
 COPY ./datagen /app/datagen/
+COPY ./sets /app/sets/
 COPY conf.py /app/conf.py
 COPY conf_lake.py /app/conf_lake.py
 COPY generate_data.py /app/generate_data.py
