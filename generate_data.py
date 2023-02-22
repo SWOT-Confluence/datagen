@@ -34,6 +34,13 @@ def get_continent(index, json_file):
         data = json.load(jf)
     return list(data[i].keys())[0].upper()
 
+def update_json_filename(json_file, continent):
+    """Update JSON file name to include continent."""
+    
+    filename_pieces = json_file.split('.')
+    cont_name = f"{filename_pieces[0]}_{continent.lower()}.{filename_pieces[1]}"
+    return cont_name
+
 def extract_ids(shpfiles, creds):
     """Extract reach identifiers from shapefile names and return a list.
     
@@ -101,7 +108,8 @@ def run_aws(args, cont):
             s3_uris, s3_creds = s3_list.login_and_run_query(args.shortname, args.provider, args.temporalrange, s3_endpoint, args.ssmkey)
             s3_uris = list(filter(lambda uri, cont=cont: cont in uri, s3_uris))    # Filter for continent
         s3_uris.sort(key=sort_shapefiles)
-        write_json(s3_uris, Path(args.directory).joinpath(conf["s3_list"]))
+        json_file = Path(args.directory).joinpath(update_json_filename(conf["s3_list"], cont))
+        write_json(s3_uris, json_file)
     except Exception as e:
         print(e)
         print("Error encountered. Exiting program.")
@@ -147,7 +155,8 @@ def run_local(args, cont):
     node_ids.sort()
     shp_files.sort(key=sort_shapefiles)
     shp_json = [ str(Path(args.shapefiledir).joinpath(shp)) for shp in shp_files ]
-    write_json(shp_json, Path(args.directory).joinpath(conf["s3_list_local"]))
+    json_file = Path(args.directory).joinpath(update_json_filename(conf["s3_list_local"], cont))
+    write_json(shp_json, json_file)
     return shp_files, reach_ids, node_ids
 
 def run_river(args):
@@ -165,10 +174,10 @@ def run_river(args):
     # Create cycle pass data
     cycle_pass = CyclePass(shp_files)
     cycle_pass_data, pass_num = cycle_pass.get_cycle_pass_data()
-    json_file = Path(args.directory).joinpath(conf["cycle_passes"])
+    json_file = Path(args.directory).joinpath(update_json_filename(conf["cycle_passes"], cont))
     print(f"Writing cycle pass data to: {json_file}")
     write_json(cycle_pass_data, json_file)
-    json_file = Path(args.directory).joinpath(conf["passes"])
+    json_file = Path(args.directory).joinpath(update_json_filename(conf["passes"], cont))
     print(f"Writing pass number data to: {json_file}")
     write_json(pass_num, json_file)
     
@@ -180,7 +189,7 @@ def run_river(args):
     print("Retrieving basin data.")
     basin = Basin(reach_ids, sword_filename, sos_filename)
     basin_data = basin.extract_data()
-    json_file = Path(args.directory).joinpath(conf["basin"])
+    json_file = Path(args.directory).joinpath(update_json_filename(conf["basin"], cont))
     print(f"Writing basin data to: {json_file}")
     write_json(basin_data, json_file)
     
@@ -188,7 +197,7 @@ def run_river(args):
     print("Retrieving reach data.")
     reach = Reach(reach_ids, sword_filename, sos_filename)
     reach_data = reach.extract_data()
-    json_file = Path(args.directory).joinpath(conf["reach"])
+    json_file = Path(args.directory).joinpath(update_json_filename(conf["reach"], cont))
     print(f"Writing reach data to: {json_file}")
     write_json(reach_data, json_file)
     
@@ -196,7 +205,7 @@ def run_river(args):
     print("Retrieving reach node data.")
     reach_node = ReachNode(reach_ids, node_ids)
     reach_node_data = reach_node.extract_data()
-    json_file = Path(args.directory).joinpath(conf["reach_node"])
+    json_file = Path(args.directory).joinpath(update_json_filename(conf["reach_node"], cont))
     print(f"Writing reach node data to: {json_file}")
     write_json(reach_node_data, json_file)    
 
