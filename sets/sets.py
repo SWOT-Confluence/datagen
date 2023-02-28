@@ -4,7 +4,7 @@ import json
 
 # Third-party imports
 import numpy as np
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 #maps
 import folium
@@ -13,7 +13,7 @@ import pandas as pd
 import random
 import webbrowser
 
-class sets:
+class Sets:
     """ Divide a list of reaches into inversion sets.
 
     Attributes
@@ -437,9 +437,9 @@ class sets:
         for set in InversionSets:
             #print(InversionSets[set]['ReachList'])
             numReaches.append(InversionSets[set]['numReaches'])
-        print('histogram of number of reaches in set')
-        plt.hist(numReaches)
-        plt.show()
+        # print('histogram of number of reaches in set')
+        # plt.hist(numReaches)
+        # plt.show()
 
         print('total number of reaches:',len(self.reaches))
         print('A total of', len(InversionSets.keys()),'sets were identified.')

@@ -2,6 +2,7 @@
 """
 
 # Standard imports
+import os
 import sys
 from pathlib import Path
 import json
@@ -11,47 +12,60 @@ from netCDF4 import Dataset
 import numpy as np
 
 # Local imports
-from sets import sets
+try:
+    from sets import Sets
+except ImportError:
+    from sets.sets import Sets
 
-def main():
+def main(args=None, continent=None):
 
     #context
-    try:
-        index_to_run=int(sys.argv[1]) #integer
-    except IndexError:
-        index_to_run=-235
+    if len(sys.argv) <= 2:
+        try:
+            index_to_run=int(sys.argv[1]) #integer
+        except IndexError:
+            index_to_run=-235
+            
+        #other commandline arguments
+        continent=sys.argv[2]
+    else:
+        index_to_run=int(args.index)
+        continent=continent
+        
+    
 
     #data directories
-    if index_to_run == -235:
-        INPUT_DIR = Path("/mnt/data/input")
-        OUTPUT_DIR = Path("/mnt/data/output")
+    if index_to_run == -235 or len(os.environ.get("AWS_BATCH_JOB_ID")) > 0:
+        INPUT_DIR = Path("/data")
+        OUTPUT_DIR = Path("/data")
+        swordfilepath=INPUT_DIR.joinpath("sword")
     else:
         INPUT_DIR = Path("/Users/mtd/Analysis/SWOT/Discharge/Confluence/verify/InversionSets/europe/")
         OUTPUT_DIR = Path("/Users/mtd/Analysis/SWOT/Discharge/Confluence/verify/InversionSets/europe/")
+        swordfilepath=INPUT_DIR
 
     # read in file with all reaches to run
-    reach_json=INPUT_DIR.joinpath('reaches.json')
+    reach_json=INPUT_DIR.joinpath(f"reaches_{continent.lower()}.json")
     with open(reach_json) as json_file:
         reaches = json.load(json_file)
-
+        
     # figure out which sword file to read
-    swordfile=reaches[0]['sword']
+    swordfile=swordfilepath.joinpath(reaches[0]['sword'])
 
     # read in sword file
-    swordfilepath=INPUT_DIR.joinpath(swordfile)
-    sword_dataset=Dataset(swordfilepath)
+    sword_dataset=Dataset(swordfile)
 
     #get set
-    #Algorithms=['MetroMan','HiVDI','SIC']
-    Algorithms=['HiVDI']
-    #Algorithms=['MetroMan','HiVDI']
+    Algorithms=['MetroMan','HiVDI','SIC']
+    # Algorithms=['HiVDI']
+    # Algorithms=['MetroMan','HiVDI']
     
     for Algorithm in Algorithms:
         print('Getting set for',Algorithm)
-        params = SetParameters(Algorithm)
+        params = SetParameters(Algorithm, continent)
         print(params)
 
-        algoset = sets(params,reaches,sword_dataset)
+        algoset = Sets(params,reaches,sword_dataset)
         InversionSets=algoset.getsets()
 
         # output to json file
@@ -60,23 +74,23 @@ def main():
     #close sword dataset
     sword_dataset.close()  
 
-def SetParameters(algo):
+def SetParameters(algo, cont):
     params={}
     params['algo']=algo
     if algo == 'MetroMan':
         params['RequireIdenticalOrbits']=True
         params['DrainageAreaPctCutoff']=10.
         params['AllowRiverJunction']=False
-        params['Filename']='metrosets.json'
+        params['Filename']=f'metrosets_{cont.lower()}.json'
         params['MaximumReachesEachDirection']=2
         params['MinimumReaches']=3
         params['AllowedReachOverlap']=-1 # specify -1 to just remove duplicates
-        params['']
+        # params['']
     elif algo == 'HiVDI':
         params['RequireIdenticalOrbits']=False
         params['DrainageAreaPctCutoff']=30.
         params['AllowRiverJunction']=False
-        params['Filename']='hivdisets.json'
+        params['Filename']=f'hivdisets_{cont.lower()}.json'
         params['MaximumReachesEachDirection']=np.inf
         params['MinimumReaches']=1
         params['AllowedReachOverlap']=.5
@@ -84,7 +98,7 @@ def SetParameters(algo):
         params['RequireIdenticalOrbits']=False
         params['DrainageAreaPctCutoff']=30.
         params['AllowRiverJunction']=False
-        params['Filename']='hivdisets.json'
+        params['Filename']=f'sicsets_{cont.lower()}.json'
         params['MaximumReachesEachDirection']=np.inf
         params['MinimumReaches']=1
         params['AllowedReachOverlap']=.67
