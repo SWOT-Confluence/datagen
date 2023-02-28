@@ -34,7 +34,7 @@ def create_args():
     arg_parser = argparse.ArgumentParser(description="Retrieve a list of S3 URIs")
     arg_parser.add_argument("-i",
                             "--index",
-                            type=str,
+                            type=int,
                             help="Index value to select continent to run on")
     arg_parser.add_argument("-c",
                             "--context",
