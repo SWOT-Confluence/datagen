@@ -21,13 +21,15 @@ def main(args=None, continent=None):
 
     #context
 
-
-    shell = get_ipython().__class__.__name__
-    if shell == 'ZMQInteractiveShell':
-        print('Running from interatctive shell (e.g. Jupyter notebook) detected. Modifying command line args')
-        sys.argv=sys.argv[1:]
-        #print(len(sys.argv))
-        #print(sys.argv)
+    try:
+        shell = get_ipython().__class__.__name__
+        if shell == 'ZMQInteractiveShell':
+            print('Running from interatctive shell (e.g. Jupyter notebook) detected. Modifying command line args')
+            sys.argv=sys.argv[1:]
+            #print(len(sys.argv))
+            #print(sys.argv)
+    except NameError:
+        print("Not running in Jupyter notebook.")
 
     if len(sys.argv) <= 2:
         try:
@@ -46,8 +48,8 @@ def main(args=None, continent=None):
     
 
     #data directories
-    #if index_to_run == -235 or len(os.environ.get("AWS_BATCH_JOB_ID")) > 0:
-    if index_to_run == -235 or type(os.environ.get("AWS_BATCH_JOB_ID"))!=type(None):
+    #if index_to_run == -235 or len(os.environ.get("AWS_BATCH_JOB_ARRAY_INDEX")) > 0:
+    if index_to_run == -235 or type(os.environ.get("AWS_BATCH_JOB_ARRAY_INDEX")) != type(None):
         INPUT_DIR = Path("/data")
         OUTPUT_DIR = Path("/data")
         swordfilepath=INPUT_DIR.joinpath("sword")
