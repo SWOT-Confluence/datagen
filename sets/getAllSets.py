@@ -48,8 +48,7 @@ def main(args=None, continent=None):
     
 
     #data directories
-    #if index_to_run == -235 or len(os.environ.get("AWS_BATCH_JOB_ARRAY_INDEX")) > 0:
-    if index_to_run == -235 or type(os.environ.get("AWS_BATCH_JOB_ARRAY_INDEX")) != type(None):
+    if index_to_run == -235 or type(os.environ.get("AWS_BATCH_JOB_ID")) != type(None):
         INPUT_DIR = Path("/data")
         OUTPUT_DIR = Path("/data")
         swordfilepath=INPUT_DIR.joinpath("sword")
