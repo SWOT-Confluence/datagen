@@ -213,19 +213,61 @@ class Sets:
 
         return ReachList,numReaches
 
-    def remove_duplicate_sets(self,InversionSets):
+    def remove_duplicate_sets(self,InversionSets,swordreachids,sword_data_continent):
 
-       #adapted from https://www.geeksforgeeks.org/python-remove-duplicate-values-in-dictionary/
-       print('... remove_duplicate_sets, starting with ', len(InversionSets),'sets')
-       temp = []
-       res = dict()
-       for key, val in InversionSets.items():
-           if val not in temp:
-               temp.append(val)
-               res[key] = val
-       print('after removing duplicates there are ', len(res),'sets')
+       InversionSetsList=self.get_IS_list(InversionSets,'','')
 
-       return res
+       InversionSetsListNoDupes=[]
+       for InversionSet in InversionSetsList:
+           SetAlreadyIncluded=False
+           for ISnew in InversionSetsListNoDupes:
+               if self.CheckSetsAreSame(InversionSet,ISnew):
+                   SetAlreadyIncluded=True
+           if not SetAlreadyIncluded:
+               InversionSetsListNoDupes.append(InversionSet)
+       
+       print('before removing dupes, n=',len(InversionSetsList))
+       print('after removing dupes, n=',len(InversionSetsListNoDupes))
+
+       InversionSetsNoDupes={}
+       for InversionSet in InversionSetsListNoDupes:
+           ReachList=self.MakeReachList(InversionSet)
+           setkey=InversionSet[0]['reach_id']
+           InversionSetsNoDupes[setkey]={}
+           InversionSetsNoDupes[setkey]['ReachList']=ReachList
+           InversionSetsNoDupes[setkey]['numReaches']=len(InversionSet)
+           InversionSetsNoDupes[setkey]['Reaches']={}
+
+           for reachid in InversionSetsNoDupes[setkey]['ReachList']:
+               k=np.argwhere(swordreachids == np.int64(reachid))
+               k=k[0,0] # not sure why argwhere is returning this as a 2-d array. this seems inelegant
+               sword_data_reach=self.pull_sword_attributes_for_reach(sword_data_continent,k)
+               InversionSetsNoDupes[setkey]['Reaches'][reachid]=sword_data_reach
+
+       return InversionSetsNoDupes
+
+    #function to check for duplicates
+    def CheckSetsAreSame(self,Set1,Set2):
+        SetsAreSame=False
+        if len(Set1)==len(Set2):
+            Set1List=self.MakeReachList(Set1)
+            Set2List=self.MakeReachList(Set2)
+        
+            if Set1List==Set2List:
+                SetsAreSame=True
+        
+        return SetsAreSame
+
+    # function to make a reach list
+    def MakeReachList(self,Set):
+        ReachList=[]
+        for Reach in Set:
+            ReachList.append(Reach['reach_id'])
+        
+        #sort does ascending by default. reverse goes descending, from upstream to downstream in SWORD
+        ReachList.sort(reverse=True) 
+        
+        return ReachList
  
     def remove_high_overlap_sets(self,InversionSets):
         HighOverlap=True
@@ -416,7 +458,16 @@ class Sets:
         swordfile=self.reaches[0]['sword']
         sosfile=self.reaches[0]['sos']
 
-        InversionSetsWrite=[]
+        InversionSetsWrite=self.get_IS_list(InversionSets,swordfile,sosfile)
+
+        with open(out_json, 'w') as json_file:
+            json.dump(InversionSetsWrite, json_file, indent=2)
+
+    def get_IS_list(self,InversionSets,swordfile,sosfile):
+        #makes a list of inversion sets, where each list item is a another list of inversion set data
+        #each inversion set list item is a dict of the data for each reach
+
+        InversionSetsList=[]
         for IS in InversionSets:
              InversionSetWrite=[]
              for reach in InversionSets[IS]['ReachList']:
@@ -426,10 +477,9 @@ class Sets:
                  reachdict['swot']=str(reach) + '_SWOT.nc'
                  reachdict['sos']=sosfile
                  InversionSetWrite.append(reachdict)
-             InversionSetsWrite.append(InversionSetWrite)
-
-        with open(out_json, 'w') as json_file:
-            json.dump(InversionSetsWrite, json_file, indent=2)
+             InversionSetsList.append(InversionSetWrite)
+        
+        return InversionSetsList
 
     def print_stats(self,InversionSets):
         # output some stats
@@ -456,7 +506,7 @@ class Sets:
 
         # remove duplicate sets
         print('removing overlapping sets...')
-        InversionSets=self.remove_duplicate_sets(InversionSets)
+        InversionSets=self.remove_duplicate_sets(InversionSets,swordreachids,sword_data_continent)
         if self.params['AllowedReachOverlap'] > 0.:
             InversionSets=self.remove_high_overlap_sets(InversionSets)
 
