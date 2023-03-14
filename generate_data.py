@@ -12,10 +12,7 @@ import re
 import zipfile
 
 # Third-party imports
-import boto3
-import botocore
 import fsspec
-import requests
 import shapefile
 
 # Local imports

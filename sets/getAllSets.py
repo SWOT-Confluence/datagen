@@ -20,22 +20,35 @@ except ImportError:
 def main(args=None, continent=None):
 
     #context
+
+    try:
+        shell = get_ipython().__class__.__name__
+        if shell == 'ZMQInteractiveShell':
+            print('Running from interatctive shell (e.g. Jupyter notebook) detected. Modifying command line args')
+            sys.argv=sys.argv[1:]
+            #print(len(sys.argv))
+            #print(sys.argv)
+    except NameError:
+        print("Not running in Jupyter notebook.")
+
     if len(sys.argv) <= 2:
         try:
-            index_to_run=int(sys.argv[1]) #integer
+            index_to_run=int(sys.argv[0]) #integer
         except IndexError:
             index_to_run=-235
             
-        #other commandline arguments
-        continent=sys.argv[2]
+        continent=sys.argv[1]
     else:
         index_to_run=int(args.index)
         continent=continent
         
+    ## temporary change - for mike's debug march 6
+    #index_to_run=sys.argv[1]
+    #continent=sys.argv[2]
     
 
     #data directories
-    if index_to_run == -235 or len(os.environ.get("AWS_BATCH_JOB_ID")) > 0:
+    if index_to_run == -235 or type(os.environ.get("AWS_BATCH_JOB_ID")) != type(None):
         INPUT_DIR = Path("/data")
         OUTPUT_DIR = Path("/data")
         swordfilepath=INPUT_DIR.joinpath("sword")
@@ -57,8 +70,7 @@ def main(args=None, continent=None):
 
     #get set
     Algorithms=['MetroMan','HiVDI','SIC']
-    # Algorithms=['HiVDI']
-    # Algorithms=['MetroMan','HiVDI']
+    #Algorithms=['MetroMan']
     
     for Algorithm in Algorithms:
         print('Getting set for',Algorithm)
