@@ -66,8 +66,7 @@ class Sets:
              if sword_data_reach['n_rch_up']==1:
                  InversionSet=self.find_set_for_reach(sword_data_reach,swordreachids,sword_data_continent)
                  InversionSet['ReachList'],InversionSet['numReaches']=self.get_reach_list(InversionSet)
-
-             InversionSets[reach['reach_id']]=InversionSet
+                 InversionSets[reach['reach_id']]=InversionSet
 
         return InversionSets
 
