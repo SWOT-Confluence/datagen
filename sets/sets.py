@@ -53,8 +53,6 @@ class Sets:
         # loop over all reaches and create a set for each
         InversionSets={}
         nreach=len(self.reaches)
-        # print(self.reaches)
-        # print(swordreachids)
         count=0
         for reach in self.reaches:
             count+=1  
@@ -72,11 +70,8 @@ class Sets:
             sword_data_reach=self.pull_sword_attributes_for_reach(sword_data_continent,k)
 
             if sword_data_reach['n_rch_up']==1:
-                print('made it')
                 InversionSet=self.find_set_for_reach(sword_data_reach,swordreachids,sword_data_continent)
-                print('again')
                 InversionSet['ReachList'],InversionSet['numReaches']=self.get_reach_list(InversionSet)
-                print(InversionSet)
                 InversionSets[reach['reach_id']]=InversionSet
 
         return InversionSets
@@ -107,12 +102,6 @@ class Sets:
         # ok so lets define a set:
         CheckVerbosity=False
 
-        # all sword ids
-        # print(swordreachids)
-
-        # a single reach with info
-        # print(sword_data_reach)
-
         # 1. initialize
         InversionSet={}
         InversionSet['OriginReach']=sword_data_reach
@@ -125,11 +114,9 @@ class Sets:
         UpstreamReachIsValid=True
         n_up_add=0
         while UpstreamReachIsValid:
-            print('looping', n_up_add)
             upstream_reaches = InversionSet['UpstreamReach']['rch_id_up']
             upstream_reaches = upstream_reaches.data
             kup=np.argwhere(swordreachids == upstream_reaches)
-            print(kup, print(len(kup)))
 
             if len(kup)!=1:
                   UpstreamReachIsValid=False
@@ -142,7 +129,6 @@ class Sets:
             if UpstreamReachIsValid:
                 #its valid, add a new reach to the set
                 InversionSet['Reaches'][sword_data_reach_up['reach_id']]=sword_data_reach_up
-                print(InversionSet['Reaches'])
                 InversionSet['UpstreamReach']=sword_data_reach_up
                 n_up_add+=1
                 if n_up_add > self.params['MaximumReachesEachDirection']:
@@ -221,23 +207,18 @@ class Sets:
 
              # sort the list of reach ids
              while not EndOfSetReached:
-                 print('looping')
                  CurrentEndOfSet=ReachList[-1]
                  try: 
-                     print('where')
                      #can reach here when there are SWORD topological inconsistencies
                      next_reach_id_downstream=InversionSet['Reaches'][CurrentEndOfSet]['rch_id_dn'][0]
                  except:
-                     print('are')
                      EndOfSetReached=True                     
 
                  if not EndOfSetReached:
-                     print('you')
                      ReachList.append(next_reach_id_downstream)
                      EndOfSetReached=ReachList[-1]==InversionSet['DownstreamReach']['reach_id']
 
              numReaches=len(ReachList)
-        print('returnning...')
         return ReachList,numReaches
 
     def remove_duplicate_sets(self,InversionSets,swordreachids,sword_data_continent):
@@ -396,7 +377,6 @@ class Sets:
                     ContainsNonRiverReach=True
             if ContainsNonRiverReach:
                 SetIsBad[IS]=True
-                #print(InversionSets[IS]['Reaches'])
             else:
                 SetIsBad[IS]=False
 
@@ -428,7 +408,6 @@ class Sets:
        SetsToRemove=list(set(SetsToRemove))
 
        for reach in SetsToRemove:
-          #print('removing',reach)
           del InversionSets[reach] 
 
        return InversionSets
