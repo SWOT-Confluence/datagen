@@ -10,6 +10,7 @@ import os
 from pathlib import Path
 import re
 import zipfile
+import glob
 
 # Third-party imports
 import fsspec
@@ -129,6 +130,7 @@ def run_local(args, cont):
     reach_ids = []
     node_ids = []
     shp_files = []
+
     with os.scandir(Path(args.shapefiledir)) as shpfiles:
         for shpfile in shpfiles:
             if cont in shpfile.name:    # Filter by continent
@@ -145,6 +147,10 @@ def run_local(args, cont):
                     if "Node" in shpfile.name:
                         node_id = {rec["node_id"] for rec in records}
                         node_ids.extend(list(node_id))
+
+
+
+
                         
     # Remove duplicates from multiple files and sort
     reach_ids = list(set(reach_ids))

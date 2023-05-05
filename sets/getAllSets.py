@@ -103,7 +103,13 @@ def SetParameters(algo, cont):
         params['DrainageAreaPctCutoff']=30.
         params['AllowRiverJunction']=False
         params['Filename']=f'hivdisets_{cont.lower()}.json'
-        params['MaximumReachesEachDirection']=np.inf
+        """
+         In some cases, the sword topology causes reaches to be up and downstream from another.
+         This causes the the set finder to run infinitly when looking up and downstream for valid set reaches.
+         We put a limit of 1000 just in case this occures. When it does occur, it only adds the two problematic reaches to the set.
+         (previously set to np.inf)
+        """
+        params['MaximumReachesEachDirection']=1000
         params['MinimumReaches']=1
         params['AllowedReachOverlap']=.5
     elif algo == 'SIC':
@@ -111,7 +117,13 @@ def SetParameters(algo, cont):
         params['DrainageAreaPctCutoff']=30.
         params['AllowRiverJunction']=False
         params['Filename']=f'sicsets_{cont.lower()}.json'
-        params['MaximumReachesEachDirection']=np.inf
+        """
+         In some cases, the sword topology causes reaches to be up and downstream from another.
+         This causes the the set finder to run infinitly when looking up and downstream for valid set reaches
+         We put a limit of 1000 just in case this occures. When it does occur, it only adds the two problematic reaches to the set
+         (previously set to np.inf)
+        """
+        params['MaximumReachesEachDirection']=1000
         params['MinimumReaches']=1
         params['AllowedReachOverlap']=.67
  
