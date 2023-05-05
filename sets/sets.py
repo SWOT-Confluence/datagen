@@ -55,18 +55,24 @@ class Sets:
         nreach=len(self.reaches)
         count=0
         for reach in self.reaches:
-             count+=1  
-             #print('finding set for reach',reach['reach_id'])
-             #if count % 100 == 0:
-             #    print('Processing reach ',count,'/',nreach)
-             k=np.argwhere(swordreachids == reach['reach_id'])
-             k=k[0,0] # not sure why argwhere is returning this as a 2-d array. this seems inelegant
-             sword_data_reach=self.pull_sword_attributes_for_reach(sword_data_continent,k)
+            count+=1  
+            print(count, 'of', len(self.reaches), 'processed')
+            #print('finding set for reach',reach['reach_id'])
+            #if count % 100 == 0:
+            #    print('Processing reach ',count,'/',nreach)
+            k=np.argwhere(swordreachids == reach['reach_id'])
+            try:
+                k=k[0,0] # not sure why argwhere is returning this as a 2-d array. this seems inelegant
+                # print(k)
+            except:
+                continue
+        
+            sword_data_reach=self.pull_sword_attributes_for_reach(sword_data_continent,k)
 
-             if sword_data_reach['n_rch_up']==1:
-                 InversionSet=self.find_set_for_reach(sword_data_reach,swordreachids,sword_data_continent)
-                 InversionSet['ReachList'],InversionSet['numReaches']=self.get_reach_list(InversionSet)
-                 InversionSets[reach['reach_id']]=InversionSet
+            if sword_data_reach['n_rch_up']==1:
+                InversionSet=self.find_set_for_reach(sword_data_reach,swordreachids,sword_data_continent)
+                InversionSet['ReachList'],InversionSet['numReaches']=self.get_reach_list(InversionSet)
+                InversionSets[reach['reach_id']]=InversionSet
 
         return InversionSets
 
@@ -108,7 +114,9 @@ class Sets:
         UpstreamReachIsValid=True
         n_up_add=0
         while UpstreamReachIsValid:
-            kup=np.argwhere(swordreachids == InversionSet['UpstreamReach']['rch_id_up'])
+            upstream_reaches = InversionSet['UpstreamReach']['rch_id_up']
+            upstream_reaches = upstream_reaches.data
+            kup=np.argwhere(swordreachids == upstream_reaches)
 
             if len(kup)!=1:
                   UpstreamReachIsValid=False
@@ -118,6 +126,7 @@ class Sets:
                   UpstreamReachIsValid=self.CheckReaches(sword_data_reach,sword_data_reach_up,'up',CheckVerbosity)
 
             if UpstreamReachIsValid:
+                #its valid, add a new reach to the set
                 InversionSet['Reaches'][sword_data_reach_up['reach_id']]=sword_data_reach_up
                 InversionSet['UpstreamReach']=sword_data_reach_up
                 n_up_add+=1
@@ -209,7 +218,6 @@ class Sets:
                      EndOfSetReached=ReachList[-1]==InversionSet['DownstreamReach']['reach_id']
 
              numReaches=len(ReachList)
-
         return ReachList,numReaches
 
     def remove_duplicate_sets(self,InversionSets,swordreachids,sword_data_continent):
@@ -338,7 +346,10 @@ class Sets:
             InversionSet['Reaches']={}
 
             k=np.argwhere(swordreachids == np.int64(excluded_reach))
-            k=k[0,0] # not sure why argwhere is returning this as a 2-d array. this seems inelegant
+            try:
+                k=k[0,0] # not sure why argwhere is returning this as a 2-d array. this seems inelegant
+            except:
+                continue
             sword_data_reach=self.pull_sword_attributes_for_reach(sword_data_continent,k)
 
             InversionSet['Reaches'][excluded_reach]=sword_data_reach
@@ -365,7 +376,6 @@ class Sets:
                     ContainsNonRiverReach=True
             if ContainsNonRiverReach:
                 SetIsBad[IS]=True
-                #print(InversionSets[IS]['Reaches'])
             else:
                 SetIsBad[IS]=False
 
@@ -397,7 +407,6 @@ class Sets:
        SetsToRemove=list(set(SetsToRemove))
 
        for reach in SetsToRemove:
-          #print('removing',reach)
           del InversionSets[reach] 
 
        return InversionSets
@@ -501,6 +510,7 @@ class Sets:
 
         # get an inversion set for each reach
         print('getting inversion set for each reach...')
+        # print(sword_data_continent,swordreachids)
         InversionSets=self.extract_inversion_sets_by_reach(sword_data_continent,swordreachids)
 
         # remove duplicate sets

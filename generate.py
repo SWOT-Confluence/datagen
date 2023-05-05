@@ -79,6 +79,10 @@ def create_args():
                             "--shapefiledir",
                             type=str,
                             help="Directory of local shapefiles")
+    arg_parser.add_argument("-g",
+                            "--global",
+                            help="Indicate global run",
+                            action="store_true")
     return arg_parser
 
 def main():

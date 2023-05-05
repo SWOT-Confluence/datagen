@@ -10,6 +10,7 @@ import os
 from pathlib import Path
 import re
 import zipfile
+import glob
 
 # Third-party imports
 import fsspec
@@ -145,7 +146,7 @@ def run_local(args, cont):
                     if "Node" in shpfile.name:
                         node_id = {rec["node_id"] for rec in records}
                         node_ids.extend(list(node_id))
-                        
+          
     # Remove duplicates from multiple files and sort
     reach_ids = list(set(reach_ids))
     reach_ids.sort()
