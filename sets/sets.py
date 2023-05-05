@@ -122,7 +122,6 @@ class Sets:
                   UpstreamReachIsValid=False
             else:
                   kup=kup[0,0]
-                  print('len not 1', kup)
                   sword_data_reach_up=self.pull_sword_attributes_for_reach(sword_data_continent,kup)
                   UpstreamReachIsValid=self.CheckReaches(sword_data_reach,sword_data_reach_up,'up',CheckVerbosity)
 
