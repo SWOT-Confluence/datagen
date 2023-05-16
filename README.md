@@ -13,7 +13,7 @@ It generates one input file per continent for the following wher {c} equals the 
 - s3_list_{c}.json: List of S3 URIs for the SWOT shapefiles.
 - sicsets_{c}.json: Sic4DVAR sets.
 
-Note: `datagen` operations have been implemented for SWOT Lake shapefiles but they need to be tested.
+**Note:** `datagen` operations have been implemented for SWOT Lake shapefiles but they need to be tested.
 
 # installation
 
@@ -21,8 +21,7 @@ Build a Docker image: `docker build -t datagen .`
 
 # execution
 
-Command line arguments
-----------------------
+**Command line arguments:**
 -i: index to locate continent in JSON file
 -c: context to generate data for: 'river' or 'lake'
 -s: short name of the collection
@@ -35,9 +34,9 @@ Command line arguments
 -j: name of continent JSON file (optional)
 -f: name of shapefile directory for local runs (optional)
 
-Execute a Docker container: 
+**Execute a Docker container: **
 
-AWS credentials will need to be passed as environment variables to the container so that `datagen` may access AWS infrastructure to generate JSON files:
+AWS credentials will need to be passed as environment variables to the container so that `datagen` may access AWS infrastructure to generate JSON files.
 
 ```
 # Credentials
