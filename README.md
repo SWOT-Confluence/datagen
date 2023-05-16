@@ -34,7 +34,7 @@ Build a Docker image: `docker build -t datagen .`
 - -j: name of continent JSON file (optional)
 - -f: name of shapefile directory for local runs (optional)
 
-**Execute a Docker container: **
+**Execute a Docker container:**
 
 AWS credentials will need to be passed as environment variables to the container so that `datagen` may access AWS infrastructure to generate JSON files.
 
