@@ -22,17 +22,17 @@ Build a Docker image: `docker build -t datagen .`
 # execution
 
 **Command line arguments:**
--i: index to locate continent in JSON file
--c: context to generate data for: 'river' or 'lake'
--s: short name of the collection
--t: temporal range to retrieve S3 URIs
--p: the collection provider name
--d: where to locate and save JSON data
--k : unique SSM encryption key identifier
--o: indicate run on simulated data (optional)
--l: indicates local run (optional)
--j: name of continent JSON file (optional)
--f: name of shapefile directory for local runs (optional)
+- -i: index to locate continent in JSON file
+- -c: context to generate data for: 'river' or 'lake'
+- -s: short name of the collection
+- -t: temporal range to retrieve S3 URIs
+- -p: the collection provider name
+- -d: where to locate and save JSON data
+- -k : unique SSM encryption key identifier
+- -o: indicate run on simulated data (optional)
+- -l: indicates local run (optional)
+- -j: name of continent JSON file (optional)
+- -f: name of shapefile directory for local runs (optional)
 
 **Execute a Docker container: **
 
