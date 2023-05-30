@@ -16,6 +16,7 @@ Command line arguments:
  -l: indicates local run (optional)
  -j: name of JSON file (optional)
  -f: name of shapefile directory for local runs (optional)
+ -u: Path to JSON file with list of reaches to subset
 
 River Example: python3 generate.py -c river -i 3 -p POCLOUD -s SWOT_SIMULATED_NA_CONTINENT_L2_HR_RIVERSP_V1 -t 2022-08-01T00:00:00Z,2022-08-22T23:59:59Z -d /home/useraccount/json_data
 Lake Example: python3 generate.py -c lake -i 3 -p POCLOUD -s SWOT_SIMULATED_NA_CONTINENT_L2_HR_RIVERSP_V1 -t 2022-08-01T00:00:00Z,2022-08-22T23:59:59Z -d /home/useraccount/json_data
@@ -79,10 +80,10 @@ def create_args():
                             "--shapefiledir",
                             type=str,
                             help="Directory of local shapefiles")
-    arg_parser.add_argument("-g",
-                            "--global",
-                            help="Indicate global run",
-                            action="store_true")
+    arg_parser.add_argument("-u",
+                            "--subsetfile",
+                            help="Path to JSON file with list of reaches to subset",
+                            type=str)
     return arg_parser
 
 def main():

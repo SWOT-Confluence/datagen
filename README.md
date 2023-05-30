@@ -15,6 +15,10 @@ It generates one input file per continent for the following wher {c} equals the 
 
 **Note:** `datagen` operations have been implemented for SWOT Lake shapefiles but they need to be tested.
 
+## subset
+
+`datagen` also includes subsetting operations. The Path to a JSON file that contains a list of string reach identifiers can be passed into the program using the `-u` flag and `datagen` will only produce JSON data for those reaches.
+
 # installation
 
 Build a Docker image: `docker build -t datagen .`
@@ -33,6 +37,7 @@ Build a Docker image: `docker build -t datagen .`
 - -l: indicates local run (optional)
 - -j: name of continent JSON file (optional)
 - -f: name of shapefile directory for local runs (optional)
+- -u: Path to JSON file with list of reaches to subset (optional)
 
 **Execute a Docker container:**
 
