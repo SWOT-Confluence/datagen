@@ -117,13 +117,13 @@ def extract_s3_uris(s3_uris, s3_creds, reach_list):
                 with zip_file.open(dbf_file) as dbf:
                     sf = shapefile.Reader(dbf=dbf)
                     records = sf.records()
-                    if "Reach" in shpfile.name:
+                    if "Reach" in shpfile:
                         shp_reaches = {rec["reach_id"] for rec in records}
                         reach_intersection = [ value for value in shp_reaches if value in reach_list ]
                         if len(reach_intersection) > 0:
-                            shp_files.append(shpfile.name)
+                            shp_files.append(shpfile)
                             reach_ids.extend(reach_intersection)
-                    if "Node" in shpfile.name:
+                    if "Node" in shpfile:
                         node_id = {rec["node_id"] for rec in records}
                         for reach_id in reach_list:
                             reach_r = re.compile(f"^{reach_id[:10]}.*")
@@ -239,7 +239,7 @@ def run_aws(args, cont, subset, reach_list = None):
     # Extract shapefiles and node identifiers for reach identifier subset
     else:
         print("Extracting shapefiles and node identifiers from subset.")
-        reach_ids, node_ids, s3_uris = extract_s3_uris(s3_uris, s3_creds, reach_list)
+        s3_uris, reach_ids, node_ids = extract_s3_uris(s3_uris, s3_creds, reach_list)
     
     # Write shapefile json
     json_file = Path(args.directory).joinpath(update_json_filename(conf["s3_list"], cont))
