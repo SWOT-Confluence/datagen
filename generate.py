@@ -79,10 +79,10 @@ def create_args():
                             "--shapefiledir",
                             type=str,
                             help="Directory of local shapefiles")
-    arg_parser.add_argument("-g",
-                            "--global",
-                            help="Indicate global run",
-                            action="store_true")
+    arg_parser.add_argument("-u",
+                            "--subsetfile",
+                            help="Path to JSON file with list of reaches to subset",
+                            type=str)
     return arg_parser
 
 def main():
