@@ -132,18 +132,25 @@ class S3List:
         ip_address: str
             client's IP address
         """
+        try:
+            ssm_client = boto3.client('ssm', region_name="us-west-2")
+            self._token = ssm_client.get_parameter(Name="bearer--edl--token", WithDecryption=True)["Parameter"]["Value"]
+        except botocore.exceptions.ClientError as error:
+            raise error
+
 
         # Post a token request and return resonse
-        token_url = f"https://{self.CMR}/legacy-services/rest/tokens"
-        token_xml = (f"<token>"
-                        f"<username>{username}</username>"
-                        f"<password>{password}</password>"
-                        f"<client_id>{client_id}</client_id>"
-                        f"<user_ip_address>{ip_address}</user_ip_address>"
-                    f"</token>")
-        headers = {"Content-Type" : "application/xml", "Accept" : "application/json"}
-        self._token = requests.post(url=token_url, data=token_xml, headers=headers) \
-            .json()["token"]["id"]
+        # token_url = f"https://{self.CMR}/legacy-services/rest/tokens"
+        # token_xml = (f"<token>"
+        #                 f"<username>{username}</username>"
+        #                 f"<password>{password}</password>"
+        #                 f"<client_id>{client_id}</client_id>"
+        #                 f"<user_ip_address>{ip_address}</user_ip_address>"
+        #             f"</token>")
+        # headers = {"Content-Type" : "application/xml", "Accept" : "application/json"}
+        # print(requests.post(url=token_url, data=token_xml, headers=headers))
+        # self._token = requests.post(url=token_url, data=token_xml, headers=headers) \
+        #     .json()["token"]["id"]
 
     def delete_token(self):
         """Delete CMR authentication token."""
