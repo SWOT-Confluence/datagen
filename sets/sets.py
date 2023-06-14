@@ -56,7 +56,6 @@ class Sets:
         count=0
         for reach in self.reaches:
             count+=1  
-            print(count, 'of', len(self.reaches), 'processed')
             #print('finding set for reach',reach['reach_id'])
             #if count % 100 == 0:
             #    print('Processing reach ',count,'/',nreach)
@@ -221,7 +220,7 @@ class Sets:
         return ReachList,numReaches
 
     def remove_duplicate_sets(self,InversionSets,swordreachids,sword_data_continent):
-
+       print('removing dupes...')
        InversionSetsList=self.get_IS_list(InversionSets,'','')
 
        InversionSetsListNoDupes=[]
@@ -232,6 +231,8 @@ class Sets:
                    SetAlreadyIncluded=True
            if not SetAlreadyIncluded:
                InversionSetsListNoDupes.append(InversionSet)
+
+               
        
        print('before removing dupes, n=',len(InversionSetsList))
        print('after removing dupes, n=',len(InversionSetsListNoDupes))
@@ -239,6 +240,19 @@ class Sets:
        InversionSetsNoDupes={}
        for InversionSet in InversionSetsListNoDupes:
            ReachList=self.MakeReachList(InversionSet)
+           roi = [
+                "23214400013",
+                "23214400021",
+                "23214400031",
+                "23214400041",
+                "23214400051",
+                "23214400061"
+                ]
+           str_sets = [str(i) for i in ReachList]
+           for reach in roi:
+                if reach in str_sets:
+                    print(reach)
+
            setkey=InversionSet[0]['reach_id']
            InversionSetsNoDupes[setkey]={}
            InversionSetsNoDupes[setkey]['ReachList']=ReachList
@@ -247,7 +261,10 @@ class Sets:
 
            for reachid in InversionSetsNoDupes[setkey]['ReachList']:
                k=np.argwhere(swordreachids == np.int64(reachid))
-               k=k[0,0] # not sure why argwhere is returning this as a 2-d array. this seems inelegant
+               try:
+                k=k[0,0] # not sure why argwhere is returning this as a 2-d array. this seems inelegant
+               except:
+                continue
                sword_data_reach=self.pull_sword_attributes_for_reach(sword_data_continent,k)
                InversionSetsNoDupes[setkey]['Reaches'][reachid]=sword_data_reach
 
@@ -259,6 +276,21 @@ class Sets:
         if len(Set1)==len(Set2):
             Set1List=self.MakeReachList(Set1)
             Set2List=self.MakeReachList(Set2)
+            # roi = [
+            # "23214400013",
+            # "23214400021",
+            # "23214400031",
+            # "23214400041",
+            # "23214400051",
+            # "23214400061"
+            # ]
+            # str_sets = [str(i) for i in Set1List]
+            # for reach in roi:
+            #     if reach in str_sets:
+            #         print(Set2List, '')
+            #         print('')
+            #         print(Set1List)
+                    
         
             if Set1List==Set2List:
                 SetsAreSame=True
@@ -273,6 +305,19 @@ class Sets:
         
         #sort does ascending by default. reverse goes descending, from upstream to downstream in SWORD
         ReachList.sort(reverse=True) 
+
+        # roi = [
+        # "23214400013",
+        # "23214400021",
+        # "23214400031",
+        # "23214400041",
+        # "23214400051",
+        # "23214400061"
+        # ]
+        # for reach in roi:
+        #     if reach in ReachList:
+        #         contains_roi = True
+
         
         return ReachList
  
@@ -502,6 +547,7 @@ class Sets:
         print('total number of reaches:',len(self.reaches))
         print('A total of', len(InversionSets.keys()),'sets were identified.')
         print('Total reaches included in sets:',sum(numReaches))
+        
 
     def getsets(self):
         # extract continent data into dict

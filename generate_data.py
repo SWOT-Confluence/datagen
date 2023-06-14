@@ -223,8 +223,24 @@ def run_aws(args, cont, subset, reach_list = None):
         else:
             s3_endpoint = conf["s3_cred_endpoints"][args.provider.lower()]
             s3_uris, s3_creds = s3_list.login_and_run_query(args.shortname, args.provider, args.temporalrange, s3_endpoint, args.ssmkey)
-            s3_uris = list(filter(lambda uri, cont=cont: cont in uri, s3_uris))    # Filter for continent
-        s3_uris.sort(key=sort_shapefiles)
+            # s3_uris = list(filter(lambda uri, cont=cont: cont in uri, s3_uris))    # Filter for continent
+            #parse s3 uris
+            this_cont_uris = []
+            continent_dict = {
+                "AF" : ['AF'] ,
+                "AS" : ['AS', 'SI'] ,
+                "EU" : ['EU'] ,
+                "NA" : ['NA', 'AR', 'GR'] ,
+                "OC" : ['AU'] ,
+                "SA" : ['SA'] 
+            }
+
+            for i in s3_uris:
+                cont_uri = os.path.basename(i).split('_')[7]
+                if cont_uri in continent_dict[cont]:
+                    this_cont_uris.append(i)
+            s3_uris = this_cont_uris
+            s3_uris.sort(key=sort_shapefiles)
     except Exception as e:
         print(e)
         print(traceback.format_exc())
