@@ -15,6 +15,7 @@ import zipfile
 # Third-party imports
 import fsspec
 import shapefile
+from bs4 import BeautifulSoup
 
 # Local imports
 from conf import conf
@@ -42,19 +43,31 @@ def extract_ids(shpfiles, creds):
             key=creds["accessKeyId"], secret=creds["secretAccessKey"], 
             token=creds["sessionToken"]) as shpfh:
 
-            # Locate and open DBF file
-            dbf_file = f"{shpfile.split('/')[-1].split('.')[0]}.dbf"            
-            zip_file = zipfile.ZipFile(shpfh, 'r')
-            with zip_file.open(dbf_file) as dbf:
-                sf = shapefile.Reader(dbf=dbf)
-                records = sf.records()
-                if "Reach" in shpfile:
-                    reach_id = {rec["reach_id"] for rec in records}
-                    reach_ids.extend(list(reach_id))
 
-                if "Node" in shpfile: 
-                    node_id = {rec["node_id"] for rec in records}
-                    node_ids.extend(list(node_id))            
+
+            # Locate and open DBF file
+            dbf_file = f"{shpfile.split('/')[-1].split('.')[0]}.dbf"
+                        # check to see if we should process, we only process things from sword 15
+            xml_fp = dbf_file.replace('.dbf', '.shp.xml') 
+  
+
+            zip_file = zipfile.ZipFile(shpfh, 'r')
+            with zip_file.open(xml_fp, 'r') as f:
+                data = f.read()
+            bs_data = BeautifulSoup(data, "xml")
+            b_unique = bs_data.find_all('xref_prior_river_db_files')
+            sword_version = str(b_unique[0]).split('>')[1].split(',')[0].split('_')[-1].split('.')[0][2:]
+            if sword_version == '15':
+                with zip_file.open(dbf_file) as dbf:
+                    sf = shapefile.Reader(dbf=dbf)
+                    records = sf.records()
+                    if "Reach" in shpfile:
+                        reach_id = {rec["reach_id"] for rec in records}
+                        reach_ids.extend(list(reach_id))
+
+                    if "Node" in shpfile: 
+                        node_id = {rec["node_id"] for rec in records}
+                        node_ids.extend(list(node_id))            
             
     # Remove duplicates from multiple files
     reach_ids = list(set(reach_ids))
