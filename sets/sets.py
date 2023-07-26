@@ -238,7 +238,9 @@ class Sets:
        print('after removing dupes, n=',len(InversionSetsListNoDupes))
 
        InversionSetsNoDupes={}
+       setkey=0
        for InversionSet in InversionSetsListNoDupes:
+           setkey+=1
            ReachList=self.MakeReachList(InversionSet)
            roi = [
                 "23214400013",
@@ -253,7 +255,7 @@ class Sets:
                 if reach in str_sets:
                     print(reach)
 
-           setkey=InversionSet[0]['reach_id']
+           #setkey=InversionSet[0]['reach_id']
            InversionSetsNoDupes[setkey]={}
            InversionSetsNoDupes[setkey]['ReachList']=ReachList
            InversionSetsNoDupes[setkey]['numReaches']=len(InversionSet)
