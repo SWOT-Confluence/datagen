@@ -72,6 +72,7 @@ def main(args=None, continent=None):
     Algorithms=['MetroMan','HiVDI','SIC']
     #Algorithms=['HiVDI']
     #Algorithms=['MetroMan']
+    #Algorithms=['SIC']
     
     for Algorithm in Algorithms:
         print('Getting set for',Algorithm)

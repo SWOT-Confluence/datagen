@@ -378,36 +378,42 @@ class Sets:
         # get all reaches 
         all_reaches=[]
         for reach in self.reaches:
-             reachid=reach['reach_id']
-             reachidstr=str(reachid)
-             if reachidstr[:-1]==1:
-                 all_reaches.append(int(reachid))
+             all_reaches.append(int(reach['reach_id']))
+             #reachid=reach['reach_id']
+             #reachidstr=str(reachid)
+             #if reachidstr[:-1]=='1':
+                 #all_reaches.append(int(reachid))
                  #all_reaches.append(int(reach['reach_id']))
 
         #get a list of reaches that are in all_reaches, but NOT in reaches_in_sets
         excluded_reaches = list(set(all_reaches) - set(reaches_in_sets))
 
-        print('adding in ', len(excluded_reaches), ' single-set reaches')
 
         #add all "excluded" reaches to InversionSets
+        iadd=0
         for excluded_reach in excluded_reaches:
             #print('adding ',excluded_reach)
-            InversionSet={}
-            InversionSet['ReachList']=[excluded_reach]
-            InversionSet['numReaches']=1
-            InversionSet['Reaches']={}
+            excluded_reach_str=str(excluded_reach)
+            if excluded_reach_str[-1]=='1':
+                iadd+=1
+                InversionSet={}
+                InversionSet['ReachList']=[excluded_reach]
+                InversionSet['numReaches']=1
+                InversionSet['Reaches']={}
 
-            k=np.argwhere(swordreachids == np.int64(excluded_reach))
-            try:
-                k=k[0,0] # not sure why argwhere is returning this as a 2-d array. this seems inelegant
-            except:
-                continue
-            sword_data_reach=self.pull_sword_attributes_for_reach(sword_data_continent,k)
+                k=np.argwhere(swordreachids == np.int64(excluded_reach))
+                try:
+                    k=k[0,0] # not sure why argwhere is returning this as a 2-d array. this seems inelegant
+                except:
+                    continue
+                sword_data_reach=self.pull_sword_attributes_for_reach(sword_data_continent,k)
 
-            InversionSet['Reaches'][excluded_reach]=sword_data_reach
+                InversionSet['Reaches'][excluded_reach]=sword_data_reach
 
-            #print(InversionSet)
-            InversionSets[excluded_reach]=InversionSet
+                #print(InversionSet)
+                InversionSets[excluded_reach]=InversionSet
+
+        print('added in ', iadd, ' single-set reaches')
 
         return InversionSets
 
@@ -578,7 +584,7 @@ class Sets:
 
         # add single-reach sets to ensure all reaches are in a set (if specified in option)
         if self.params['MinimumReaches']==1:
-            print('adding in single sets...')
+            print('adding in sets with a single reach...')
             InversionSets=self.add_single_reach_sets(InversionSets,swordreachids,sword_data_continent)
 
         # remove sets with too few reaches
