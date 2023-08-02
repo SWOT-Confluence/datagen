@@ -53,9 +53,9 @@ def main(args=None, continent=None):
         OUTPUT_DIR = Path("/data")
         swordfilepath=INPUT_DIR.joinpath("sword")
     else:
-        INPUT_DIR = Path("/Users/mtd/Analysis/SWOT/Discharge/Confluence/verify/InversionSets/europe/")
-        OUTPUT_DIR = Path("/Users/mtd/Analysis/SWOT/Discharge/Confluence/verify/InversionSets/europe/")
-        swordfilepath=INPUT_DIR
+        INPUT_DIR = Path("/Users/mtd/Analysis/SWOT/Discharge/Confluence/local_run/make_sets/data/")
+        OUTPUT_DIR = Path("/Users/mtd/Analysis/SWOT/Discharge/Confluence/local_run/make_sets/data/")
+        swordfilepath=INPUT_DIR.joinpath("sword")
 
     # read in file with all reaches to run
     reach_json=INPUT_DIR.joinpath(f"reaches_{continent.lower()}.json")
@@ -70,6 +70,7 @@ def main(args=None, continent=None):
 
     #get set
     Algorithms=['MetroMan','HiVDI','SIC']
+    #Algorithms=['HiVDI']
     #Algorithms=['MetroMan']
     
     for Algorithm in Algorithms:

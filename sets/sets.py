@@ -366,6 +366,7 @@ class Sets:
         return InversionSets
  
     def add_single_reach_sets(self,InversionSets,swordreachids,sword_data_continent):
+        #only add reaches that are type 
 
         #get all reaches currently in sets
         reaches_in_sets=[]
@@ -377,7 +378,11 @@ class Sets:
         # get all reaches 
         all_reaches=[]
         for reach in self.reaches:
-             all_reaches.append(int(reach['reach_id']))
+             reachid=reach['reach_id']
+             reachidstr=str(reachid)
+             if reachidstr[:-1]==1:
+                 all_reaches.append(int(reachid))
+                 #all_reaches.append(int(reach['reach_id']))
 
         #get a list of reaches that are in all_reaches, but NOT in reaches_in_sets
         excluded_reaches = list(set(all_reaches) - set(reaches_in_sets))
@@ -567,14 +572,14 @@ class Sets:
         if self.params['AllowedReachOverlap'] > 0.:
             InversionSets=self.remove_high_overlap_sets(InversionSets)
 
+        # remove sets with non-river reaches
+        print('removing sets with non-river reaches...')
+        InversionSets=self.remove_sets_with_non_river_reaches(InversionSets)
+
         # add single-reach sets to ensure all reaches are in a set (if specified in option)
         if self.params['MinimumReaches']==1:
             print('adding in single sets...')
             InversionSets=self.add_single_reach_sets(InversionSets,swordreachids,sword_data_continent)
-
-        # remove sets with non-river reaches
-        print('removing sets with non-river reaches...')
-        InversionSets=self.remove_sets_with_non_river_reaches(InversionSets)
 
         # remove sets with too few reaches
         print('removing sets with too few reaches...')
