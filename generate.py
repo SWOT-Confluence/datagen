@@ -84,6 +84,10 @@ def create_args():
                             "--subsetfile",
                             help="Path to JSON file with list of reaches to subset",
                             type=str)
+    arg_parser.add_argument("-a",
+                            "--passlist",
+                            help="Path to JSON file with list of passes to subset",
+                            type=str)
     return arg_parser
 
 def main():
