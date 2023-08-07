@@ -58,15 +58,23 @@ def extract_ids(shpfiles, creds, pass_list_data = False):
             bs_data = BeautifulSoup(data, "xml")
             b_unique = bs_data.find_all('xref_prior_river_db_files')
             sword_version = str(b_unique[0]).split('>')[1].split(',')[0].split('_')[-1].split('.')[0][2:]
-            pass_number = str(shpfile).split('_')[6]
+            pass_number = str(os.path.basename(shpfile)).split('_')[6]
             if sword_version == '15':
                 correct_pass = True
                 if pass_list_data:
-                    if pass_number in pass_list_data:
+                    print('passlist provided')
+                    print(pass_number, pass_list_data)
+                    if str(pass_number) in pass_list_data:
+                        print('str match')
+                        correct_pass == True
+                    
+                    elif int(pass_number) in pass_list_data:
+                        print('int match')
                         correct_pass == True
                     else:
-                        correct_pass == False
-
+                        print('no match')
+                        continue
+                print('cp', correct_pass)
                 if correct_pass:
                     with zip_file.open(dbf_file) as dbf:
                         sf = shapefile.Reader(dbf=dbf)
@@ -290,6 +298,8 @@ def run_aws(args, cont, subset, reach_list = False, pass_list_data = False):
 
     # Extract a list of reach identifiers
     if (subset == False) or (pass_list_data != False):
+        print('subset', subset)
+        print('pass list data', pass_list_data)
         print("Extracting reach and node identifiers from shapefiles. Filtering by passlist if provided.")
         s3_uris, reach_ids, node_ids = extract_ids(s3_uris, s3_creds, pass_list_data= pass_list_data)
         
@@ -342,8 +352,8 @@ def run_river(args):
         reach_list = []
         subset = False
     
-    if args.pass_list:
-        with open(args.pass_list) as jf:
+    if args.passlist:
+        with open(args.passlist) as jf:
             pass_list_data = json.load(jf)
     else:
         pass_list_data = False
@@ -355,6 +365,7 @@ def run_river(args):
         shp_files, reach_ids, node_ids = run_aws(args, cont, subset, reach_list, pass_list_data=pass_list_data)
     
     # Create cycle pass data
+    print('post filter shp', shp_files[:10])
     cycle_pass = CyclePass(shp_files)
     cycle_pass_data, pass_num = cycle_pass.get_cycle_pass_data()
     json_file = Path(args.directory).joinpath(update_json_filename(conf["cycle_passes"], cont))
