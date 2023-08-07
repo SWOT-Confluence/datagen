@@ -178,6 +178,7 @@ class S3List:
                 }
         res = requests.get(url=url, params=params)        
         coll = res.json()
+        print(coll)
         return [url["URL"] for res in coll["items"] for url in res["umm"]["RelatedUrls"] if url["Type"] == "GET DATA VIA DIRECT ACCESS"]
     
     def login_and_run_query(self, short_name, provider, temporal_range, s3_endpoint, key):

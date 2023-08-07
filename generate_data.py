@@ -26,7 +26,7 @@ from datagen.ReachNode import ReachNode
 from datagen.S3List import S3List
 from sets.getAllSets import main
 
-def extract_ids(shpfiles, creds):
+def extract_ids(shpfiles, creds, pass_list_data = False):
     """Extract reach identifiers from shapefile names and return a list.
     
     Parameters
@@ -37,6 +37,7 @@ def extract_ids(shpfiles, creds):
 
     reach_ids = []
     node_ids = []
+    shp_list = []
     for shpfile in shpfiles:
         # Open S3 zip file
         with fsspec.open(f"{shpfile}", mode="rb", anon=False, 
@@ -57,24 +58,59 @@ def extract_ids(shpfiles, creds):
             bs_data = BeautifulSoup(data, "xml")
             b_unique = bs_data.find_all('xref_prior_river_db_files')
             sword_version = str(b_unique[0]).split('>')[1].split(',')[0].split('_')[-1].split('.')[0][2:]
+            pass_number = str(os.path.basename(shpfile)).split('_')[6]
             if sword_version == '15':
-                with zip_file.open(dbf_file) as dbf:
-                    sf = shapefile.Reader(dbf=dbf)
-                    records = sf.records()
-                    if "Reach" in shpfile:
-                        reach_id = {rec["reach_id"] for rec in records}
-                        reach_ids.extend(list(reach_id))
+                correct_pass = True
+                if pass_list_data:
+                    print('passlist provided')
+                    print(pass_number, pass_list_data)
+                    if str(pass_number) in pass_list_data:
+                        print('str match')
+                        correct_pass == True
+                    
+                    elif int(pass_number) in pass_list_data:
+                        print('int match')
+                        correct_pass == True
+                    else:
+                        print('no match')
+                        continue
+                print('cp', correct_pass)
+                if correct_pass:
+                    with zip_file.open(dbf_file) as dbf:
+                        sf = shapefile.Reader(dbf=dbf)
+                        records = sf.records()
+                        if "Reach" in shpfile:
+                            reach_id = {rec["reach_id"] for rec in records}
+                            reach_ids.extend(list(reach_id))
+                            shp_list.append(shpfile)
 
-                    if "Node" in shpfile: 
-                        node_id = {rec["node_id"] for rec in records}
-                        node_ids.extend(list(node_id))            
+                        if "Node" in shpfile: 
+                            node_id = {rec["node_id"] for rec in records}
+                            node_ids.extend(list(node_id)) 
+
+
+
+                    #                     with zip_file.open(dbf_file) as dbf:
+                    # sf = shapefile.Reader(dbf=dbf)
+                    # records = sf.records()
+                    # if "Reach" in shpfile:
+                    #     shp_reaches = {rec["reach_id"] for rec in records}
+                    #     reach_intersection = [ value for value in shp_reaches if value in reach_list ]
+                    #     if len(reach_intersection) > 0:
+                    #         shp_files.append(shpfile)
+                    #         reach_ids.extend(reach_intersection)
+                    # if "Node" in shpfile:
+                    #     node_id = {rec["node_id"] for rec in records}
+                    #     for reach_id in reach_list:
+                    #         reach_r = re.compile(f"^{reach_id[:10]}.*")
+                    #         node_ids.extend(list(filter(reach_r.match, node_id)))           
             
     # Remove duplicates from multiple files
     reach_ids = list(set(reach_ids))
     reach_ids.sort()
     node_ids = list(set(node_ids))
     node_ids.sort()
-    return reach_ids, node_ids
+    return shp_list, reach_ids, node_ids
 
 def extract_ids_local(shapefiledir, cont, outdir):
     
@@ -223,7 +259,7 @@ def write_json(json_object, filename):
     with open(filename, 'w') as jf:
         json.dump(json_object, jf, indent=2)
 
-def run_aws(args, cont, subset, reach_list = None):
+def run_aws(args, cont, subset, reach_list = False, pass_list_data = False):
     """Executes operations to retrieve reach identifiers from shapefiles hosted
     in AWS S3 bucket."""
 
@@ -261,14 +297,18 @@ def run_aws(args, cont, subset, reach_list = None):
         exit(1)
 
     # Extract a list of reach identifiers
-    if subset == False:
-        print("Extracting reach and node identifiers from shapefiles.")
-        reach_ids, node_ids = extract_ids(s3_uris, s3_creds)
+    if (subset == False) or (pass_list_data != False):
+        print('subset', subset)
+        print('pass list data', pass_list_data)
+        print("Extracting reach and node identifiers from shapefiles. Filtering by passlist if provided.")
+        s3_uris, reach_ids, node_ids = extract_ids(s3_uris, s3_creds, pass_list_data= pass_list_data)
         
     # Extract shapefiles and node identifiers for reach identifier subset
     else:
         print("Extracting shapefiles and node identifiers from subset.")
         s3_uris, reach_ids, node_ids = extract_s3_uris(s3_uris, s3_creds, reach_list)
+    
+
     
     # Write shapefile json
     json_file = Path(args.directory).joinpath(update_json_filename(conf["s3_list"], cont))
@@ -312,13 +352,20 @@ def run_river(args):
         reach_list = []
         subset = False
     
+    if args.passlist:
+        with open(args.passlist) as jf:
+            pass_list_data = json.load(jf)
+    else:
+        pass_list_data = False
+    
     # Determine where run is taking place (local or aws)
     if args.local:
         shp_files, reach_ids, node_ids = run_local(args, cont, subset, reach_list)
     else:
-        shp_files, reach_ids, node_ids = run_aws(args, cont, subset, reach_list)
+        shp_files, reach_ids, node_ids = run_aws(args, cont, subset, reach_list, pass_list_data=pass_list_data)
     
     # Create cycle pass data
+    print('post filter shp', shp_files[:10])
     cycle_pass = CyclePass(shp_files)
     cycle_pass_data, pass_num = cycle_pass.get_cycle_pass_data()
     json_file = Path(args.directory).joinpath(update_json_filename(conf["cycle_passes"], cont))
