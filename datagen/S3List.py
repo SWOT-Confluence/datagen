@@ -178,8 +178,11 @@ class S3List:
                 }
         res = requests.get(url=url, params=params)        
         coll = res.json()
-        print(coll)
-        return [url["URL"] for res in coll["items"] for url in res["umm"]["RelatedUrls"] if url["Type"] == "GET DATA VIA DIRECT ACCESS"]
+        # print(coll)
+        all_urls = [url["URL"] for res in coll["items"] for url in res["umm"]["RelatedUrls"] if url["Type"] == "GET DATA VIA DIRECT ACCESS"]
+        print(all_urls)
+        all_urls = [url for url in all_urls if url[-3:] == 'zip']
+        return all_urls
     
     def login_and_run_query(self, short_name, provider, temporal_range, s3_endpoint, key):
         """Log into CMR and run query to retrieve a list of S3 URLs."""

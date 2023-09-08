@@ -16,6 +16,7 @@ import zipfile
 import fsspec
 import shapefile
 from bs4 import BeautifulSoup
+import numpy as np
 
 # Local imports
 from conf import conf
@@ -38,6 +39,8 @@ def extract_ids(shpfiles, creds, pass_list_data = False):
     reach_ids = []
     node_ids = []
     shp_list = []
+
+
     for shpfile in shpfiles:
         # Open S3 zip file
         with fsspec.open(f"{shpfile}", mode="rb", anon=False, 
@@ -67,7 +70,6 @@ def extract_ids(shpfiles, creds, pass_list_data = False):
                     if str(pass_number) in pass_list_data:
                         print('str match')
                         correct_pass == True
-                    
                     elif int(pass_number) in pass_list_data:
                         print('int match')
                         correct_pass == True
@@ -87,6 +89,7 @@ def extract_ids(shpfiles, creds, pass_list_data = False):
                         if "Node" in shpfile: 
                             node_id = {rec["node_id"] for rec in records}
                             node_ids.extend(list(node_id)) 
+                            shp_list.append(shpfile)
 
 
 
@@ -147,7 +150,7 @@ def extract_ids_local(shapefiledir, cont, outdir):
     write_json(shp_json, json_file)
     return shp_files, reach_ids, node_ids
 
-def extract_s3_uris(s3_uris, s3_creds, reach_list):
+def extract_s3_uris(s3_uris, s3_creds, reach_list, args, s3_endpoint):
     """Extract S3 URIs from reach file subset."""
     
     # Open shapefiles and locate reach and node identifiers
@@ -156,27 +159,40 @@ def extract_s3_uris(s3_uris, s3_creds, reach_list):
     shp_files = []
     for shpfile in s3_uris:
         # Open S3 zip file
-        with fsspec.open(f"{shpfile}", mode="rb", anon=False, 
-            key=s3_creds["accessKeyId"], secret=s3_creds["secretAccessKey"], 
-            token=s3_creds["sessionToken"]) as shpfh:
-            
-                # Locate and open DBF file
-                dbf_file = f"{shpfile.split('/')[-1].split('.')[0]}.dbf"            
-                zip_file = zipfile.ZipFile(shpfh, 'r')
-                with zip_file.open(dbf_file) as dbf:
-                    sf = shapefile.Reader(dbf=dbf)
-                    records = sf.records()
-                    if "Reach" in shpfile:
-                        shp_reaches = {rec["reach_id"] for rec in records}
-                        reach_intersection = [ value for value in shp_reaches if value in reach_list ]
-                        if len(reach_intersection) > 0:
-                            shp_files.append(shpfile)
-                            reach_ids.extend(reach_intersection)
-                    if "Node" in shpfile:
-                        node_id = {rec["node_id"] for rec in records}
-                        for reach_id in reach_list:
-                            reach_r = re.compile(f"^{reach_id[:10]}.*")
-                            node_ids.extend(list(filter(reach_r.match, node_id)))
+        retry_num = 3
+        while retry_num != 0:
+            try:
+                with fsspec.open(f"{shpfile}", mode="rb", anon=False, 
+                    key=s3_creds["accessKeyId"], secret=s3_creds["secretAccessKey"], 
+                    token=s3_creds["sessionToken"]) as shpfh:
+                    
+                        # Locate and open DBF file
+                        dbf_file = f"{shpfile.split('/')[-1].split('.')[0]}.dbf"            
+                        zip_file = zipfile.ZipFile(shpfh, 'r')
+                        with zip_file.open(dbf_file) as dbf:
+                            sf = shapefile.Reader(dbf=dbf)
+                            records = sf.records()
+                            if "Reach" in shpfile:
+                                shp_reaches = {rec["reach_id"] for rec in records}
+                                reach_intersection = [ value for value in shp_reaches if value in reach_list ]
+                                if len(reach_intersection) > 0:
+                                    shp_files.append(shpfile)
+                                    reach_ids.extend(reach_intersection)
+                            if "Node" in shpfile:
+                                node_id = {rec["node_id"] for rec in records}
+                                for reach_id in reach_list:
+                                    reach_r = re.compile(f"^{reach_id[:10]}.*")
+                                    node_ids.extend(list(filter(reach_r.match, node_id)))
+                retry_num = 0
+            except Exception as e:
+                print(e)
+                print('repulling creds and trying again, try', retry_num)
+                s3_list = S3List()
+                s3_uris, s3_creds = s3_list.login_and_run_query(args.shortname, args.provider, args.temporalrange, s3_endpoint, args.ssmkey)
+                retry_num -= 1
+
+
+
     
     # Sort and remove duplicates
     reach_ids = list(set(reach_ids))
@@ -306,7 +322,7 @@ def run_aws(args, cont, subset, reach_list = False, pass_list_data = False):
     # Extract shapefiles and node identifiers for reach identifier subset
     else:
         print("Extracting shapefiles and node identifiers from subset.")
-        s3_uris, reach_ids, node_ids = extract_s3_uris(s3_uris, s3_creds, reach_list)
+        s3_uris, reach_ids, node_ids = extract_s3_uris(s3_uris, s3_creds, reach_list, args, s3_endpoint)
     
 
     
