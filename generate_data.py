@@ -244,6 +244,7 @@ def extract_s3_uris(s3_uris, s3_creds, s3_endpoint,  args, reach_list = False, p
     reach_ids.sort()
     node_ids = list(set(node_ids))
     node_ids.sort()
+    shp_files = list(set(shp_files))
     shp_files.sort(key=sort_shapefiles)
     print('returning these shapefiles')
     print(shp_files)
