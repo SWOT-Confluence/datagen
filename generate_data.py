@@ -208,7 +208,8 @@ def extract_s3_uris(s3_uris, s3_creds, s3_endpoint,  args, reach_list = False, p
                                             reach_ids.extend(reach_intersection)
                                     else:
                                         shp_files.append(shpfile)
-                                        reach_ids.extend(reach_intersection)
+                                        reach_ids.extend(shp_reaches)
+                                        # reach_ids.extend(reach_intersection)
 
                                     
                                 if "Node" in shpfile:
