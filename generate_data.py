@@ -333,7 +333,7 @@ def run_aws(args, cont, subset, reach_list = False, pass_list_data = False):
         if args.simulated:
             s3_uris, s3_creds = s3_list.get_s3_uris_sim()
         else:
-            s3_endpoint = conf["s3_cred_endpoints"][args.provider.lower()]
+            s3_endpoint = conf["s3_cred_endpoints"][args.provider]
             s3_uris, s3_creds = s3_list.login_and_run_query(args.shortname, args.provider, args.temporalrange, s3_endpoint, args.ssmkey)
             # s3_uris = list(filter(lambda uri, cont=cont: cont in uri, s3_uris))    # Filter for continent
             #parse s3 uris

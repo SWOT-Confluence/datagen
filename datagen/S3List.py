@@ -132,6 +132,7 @@ class S3List:
         ip_address: str
             client's IP address
         """
+        url = f"https://{self.CMR}/search/granules.umm_json"
         try:
             ssm_client = boto3.client('ssm', region_name="us-west-2")
             self._token = ssm_client.get_parameter(Name="bearer--edl--token", WithDecryption=True)["Parameter"]["Value"]
@@ -176,9 +177,12 @@ class S3List:
                     "sort_key" : "start_date",
                     "temporal" : temporal_range
                 }
-        res = requests.get(url=url, params=params)        
+        res = requests.get(url=url, params=params)
+        print(res)        
         coll = res.json()
-        # print(coll)
+        print('coll')
+        print(coll)
+        print('all')
         all_urls = [url["URL"] for res in coll["items"] for url in res["umm"]["RelatedUrls"] if url["Type"] == "GET DATA VIA DIRECT ACCESS"]
         print(all_urls)
         all_urls = [url for url in all_urls if url[-3:] == 'zip']
@@ -221,10 +225,18 @@ class S3List:
         except botocore.exceptions.ClientError as e:
             raise e
         
-        s3 = boto3.client("s3",
-                          aws_access_key_id=creds["accessKeyId"],
-                          aws_secret_access_key=creds["secretAccessKey"],
-                          aws_session_token=creds["sessionToken"])
+        # s3 = boto3.client("s3",
+        #                   aws_access_key_id=creds["accessKeyId"],
+        #                   aws_secret_access_key=creds["secretAccessKey"],
+        #                   aws_session_token=creds["sessionToken"])
+
+
+        session = boto3.Session(
+            aws_access_key_id=creds["accessKeyId"],
+            aws_secret_access_key=creds["secretAccessKey"],
+            )
+        s3 = session.resource('s3')
+
         try:
             response = s3.list_objects(
                 Bucket="confluence-swot",
