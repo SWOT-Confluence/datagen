@@ -59,7 +59,7 @@ class Basin:
     def get_sword(self):
         """Associate basin identifiers, reach identifiers and SWORD file names."""
         
-        basin_ids = set(list(map(lambda x: int(str(x)[0:2]), self.reach_ids)))
+        basin_ids = set(list(map(lambda x: int(str(x)[0:4]), self.reach_ids)))
         for basin_id in basin_ids:
             self.basin_data.append({"basin_id": basin_id, 
                                     "reach_id": extract_reach_ids(basin_id, self.reach_ids),
