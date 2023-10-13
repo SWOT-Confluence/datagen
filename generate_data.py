@@ -17,6 +17,7 @@ import fsspec
 import shapefile
 from bs4 import BeautifulSoup
 import numpy as np
+import fnmatch
 
 # Local imports
 from conf import conf
@@ -360,18 +361,18 @@ def run_aws(args, cont, subset, reach_list = False, pass_list_data = False):
         exit(1)
 
     # Extract a list of reach identifiers
-    if (subset == False) and (pass_list_data == False):
-        print('subset', subset)
-        print('pass list data', pass_list_data)
-        print("Extracting reach and node identifiers from shapefiles. Filtering by passlist if provided.")
+    # if (subset == False) and (pass_list_data == False):
+    #     print('subset', subset)
+    #     print('pass list data', pass_list_data)
+    #     print("Extracting reach and node identifiers from shapefiles. Filtering by passlist if provided.")
 
-        s3_uris, reach_ids, node_ids = extract_ids(s3_uris, s3_creds, pass_list_data= pass_list_data)
+    #     s3_uris, reach_ids, node_ids = extract_ids(s3_uris, s3_creds, pass_list_data= pass_list_data)
         
-    # Extract shapefiles and node identifiers for reach identifier subset
-    else:
-        print("Extracting shapefiles and node identifiers from subset.")
-        # extract_s3_uris(s3_uris, s3_creds, s3_endpoint,  args, reach_list = False, pass_list_data = False):
-        s3_uris, reach_ids, node_ids = extract_s3_uris(s3_uris= s3_uris, s3_creds = s3_creds, args = args, s3_endpoint = s3_endpoint, reach_list=reach_list, pass_list_data=pass_list_data)
+    # # Extract shapefiles and node identifiers for reach identifier subset
+    # else:
+    #     print("Extracting shapefiles and node identifiers from subset.")
+    #     # extract_s3_uris(s3_uris, s3_creds, s3_endpoint,  args, reach_list = False, pass_list_data = False):
+    s3_uris, reach_ids, node_ids = extract_s3_uris(s3_uris= s3_uris, s3_creds = s3_creds, args = args, s3_endpoint = s3_endpoint, reach_list=reach_list, pass_list_data=pass_list_data)
     
 
     

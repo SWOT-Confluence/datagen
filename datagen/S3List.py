@@ -178,13 +178,13 @@ class S3List:
                     "temporal" : temporal_range
                 }
         res = requests.get(url=url, params=params)
-        print(res)        
+        # print(res)        
         coll = res.json()
-        print('coll')
-        print(coll)
-        print('all')
+        # print('coll')
+        # print(coll)
+        # print('all')
         all_urls = [url["URL"] for res in coll["items"] for url in res["umm"]["RelatedUrls"] if url["Type"] == "GET DATA VIA DIRECT ACCESS"]
-        print(all_urls)
+        # print(all_urls)
         all_urls = [url for url in all_urls if url[-3:] == 'zip']
         return all_urls
     
