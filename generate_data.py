@@ -18,6 +18,8 @@ import shapefile
 from bs4 import BeautifulSoup
 import numpy as np
 import fnmatch
+import netCDF4
+import shutil
 
 # Local imports
 from conf import conf
@@ -27,6 +29,78 @@ from datagen.Reach import Reach
 from datagen.ReachNode import ReachNode
 from datagen.S3List import S3List
 from sets.getAllSets import main
+
+def apply_reach_patch(sword_dataset, swordpatch):
+    """Apply reach level changes two the new copy of SWORD with the suffix _patch.nc
+    
+    Parameters
+    ----------
+    sword_dataset: netCDF4 Dataset
+        netCDF4 Dataset of the new copy of sword
+
+    swordpatch: dict
+        dict of changes to the sword dataset
+    
+    """
+    all_reaches = sword_dataset['reaches']['reach_id'][:]
+    for reach in list(swordpatch['reach_data'].keys()):
+        if int(reach) in all_reaches:
+            reach_index = np.where(all_reaches == int(reach))[0][0]
+            for var in list(swordpatch['reach_data'][reach].keys()):
+
+                if var != 'metadata':
+                    if len(list(swordpatch['reaches'][var][:])) != len(all_reaches):
+                        pre_transformed_data = swordpatch['reaches'][var][:]
+                        transformed_data = pre_transformed_data.T
+                        transformed_data[reach_index][:] = swordpatch['reach_data'][reach][var]
+                        un_transformed_data = transformed_data.T
+                        sword_dataset['reaches'][var][:] = un_transformed_data
+
+                    
+                    else:
+                        sword_dataset['reaches'][var][reach_index] = swordpatch['reach_data'][reach][var]
+
+
+   
+
+
+def patch_sword(args, INPUT_DIR, sword_filename, conf):
+    """Create a new copy of sword with the '_patch.nc' suffix, delete any previous patch versions
+    , update the conf file with the new sword suffix, apply all patches
+    """
+
+    # create filepaths
+    new_suffix = conf['sword_suffix'].replace('.nc', '_patch.nc')
+
+    new_sword_filename = sword_filename.replace('.nc', '_patch.nc')
+
+    swordfilepath=INPUT_DIR.joinpath("sword")
+
+    old_swordfile=swordfilepath.joinpath(sword_filename)
+
+    new_swordfile = swordfilepath.joinpath(new_sword_filename)
+
+
+    # remove old sword_patch file, create a new one
+
+    os.remove(new_swordfile)
+
+    shutil.copy(old_swordfile, new_swordfile)
+
+    sd = netCDF4.Dataset(new_swordfile, 'a')
+
+
+    # load in swordpatch
+    with open(args.swordpatch) as jf:
+        swordpatch = json.load(jf)
+
+
+    # apply reach patch
+    apply_reach_patch(sword_dataset=sd, swordpatch=swordpatch)
+
+
+
+    return new_suffix, new_sword_filename
 
 def extract_ids(shpfiles, creds, pass_list_data = False):
     """Extract reach identifiers from shapefile names and return a list.
@@ -406,6 +480,8 @@ def run_local(args, cont, subset, reach_list=None):
 
 def run_river(args):
     """Execute the operations needed to generate JSON data."""
+
+    INPUT_DIR = Path("/data")
     
     # Determine continent to run on
     cont = get_continent(args.index, Path(args.directory).joinpath(args.jsonfile))
@@ -444,6 +520,13 @@ def run_river(args):
     # Filenames
     sword_filename = f"{cont.lower()}_{conf['sword_suffix']}"
     sos_filename = f"{cont.lower()}_{conf['sos_suffix']}"
+
+    # Patch SWORD Issues
+    if args.swordpatch:
+        print('Patching SWORD')
+        conf['sword_suffix'], sword_filename = patch_sword(args, INPUT_DIR, sword_filename, conf)
+        print('Finished patching, new suffix and filename:', conf['sword_suffix'], sword_filename)
+
     
     # Create basin data
     print("Retrieving basin data.")
