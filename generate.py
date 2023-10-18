@@ -89,6 +89,10 @@ def create_args():
                             "--passlist",
                             help="Path to JSON file with list of passes to subset",
                             type=str)
+    arg_parser.add_argument("-w",
+                            "--swordpatch",
+                            help="Path to JSON file that patches SWORD topology issues",
+                            type=str)
     return arg_parser
 
 def main():
