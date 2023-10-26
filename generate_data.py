@@ -49,8 +49,8 @@ def apply_reach_patch(sword_dataset, swordpatch):
             for var in list(swordpatch['reach_data'][reach].keys()):
 
                 if var != 'metadata':
-                    if len(list(swordpatch['reaches'][var][:])) != len(all_reaches):
-                        pre_transformed_data = swordpatch['reaches'][var][:]
+                    if len(list(sword_dataset['reaches'][var][:])) != len(all_reaches):
+                        pre_transformed_data = sword_dataset['reaches'][var][:]
                         transformed_data = pre_transformed_data.T
                         transformed_data[reach_index][:] = swordpatch['reach_data'][reach][var]
                         un_transformed_data = transformed_data.T
@@ -82,8 +82,8 @@ def patch_sword(args, INPUT_DIR, sword_filename, conf):
 
 
     # remove old sword_patch file, create a new one
-
-    os.remove(new_swordfile)
+    if os.path.exists(new_swordfile):
+        os.remove(new_swordfile)
 
     shutil.copy(old_swordfile, new_swordfile)
 
