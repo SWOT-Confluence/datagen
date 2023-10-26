@@ -33,6 +33,10 @@ class Sets:
         self.sword_dataset=sword_dataset
 
     def extract_data_sword_continent_file(self):
+         """
+         Extracting data that is used to defind sets from SWORD
+         """
+
         swordreachids=self.sword_dataset["reaches/reach_id"][:]
 
         sword_data_continent={}
@@ -50,7 +54,10 @@ class Sets:
         return swordreachids,sword_data_continent
 
     def extract_inversion_sets_by_reach(self,sword_data_continent,swordreachids):
-        # loop over all reaches and create a set for each
+        """
+        loop over all reaches and create a set for each
+        """
+
         InversionSets={}
         nreach=len(self.reaches)
         count=0
@@ -97,8 +104,21 @@ class Sets:
 
         return sword_data_reach
 
-    def find_set_for_reach(self,sword_data_reach,swordreachids,sword_data_continent):
+    def find_set_for_reach(self,sword_data_reach,swordreachids,sword_data_continent):    
+        """Seting parameters for setfinder
+
+        Parameters
+        ----------
+        sword_data_reach: dict
+            Dictionary of relevant data from SWORD
+        swordreachids: list
+            List of sword reach ids
+        """
+        
         # ok so lets define a set:
+
+
+
         CheckVerbosity=False
 
         # 1. initialize

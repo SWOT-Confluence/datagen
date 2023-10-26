@@ -191,6 +191,17 @@ def extract_ids(shpfiles, creds, pass_list_data = False):
     return shp_list, reach_ids, node_ids
 
 def extract_ids_local(shapefiledir, cont, outdir):
+        """Extract reach identifiers from shapefile names and return a list.
+    
+    Parameters
+    ----------
+    shapefiledir: path
+        path to local shapefiles
+    cont: string
+        continent abreviation
+    outdir: path
+        path to the directory contianing the s3 list json
+    """
     
     # Extract reach identifiers from local files
     print("Extracting reach and node identifiers from shapefiles.")
@@ -384,6 +395,7 @@ def get_subset(json_file):
     return data
    
 def strtoi(text):
+    """Convert string digits to integers"""
     return int(text) if text.isdigit() else text
 
 def sort_shapefiles(shapefile):

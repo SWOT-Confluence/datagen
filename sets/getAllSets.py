@@ -18,6 +18,7 @@ except ImportError:
     from sets.sets import Sets
 
 def main(args=None, continent=None):
+    """Main function for finding sets"""
 
     #context
 
@@ -89,6 +90,15 @@ def main(args=None, continent=None):
     sword_dataset.close()  
 
 def SetParameters(algo, cont):
+    """Seting parameters for setfinder
+
+    Parameters
+    ----------
+    algo: string
+        Algorithm name
+    cont: string
+        Continent abrevation
+    """
     params={}
     params['algo']=algo
     if algo == 'MetroMan':
