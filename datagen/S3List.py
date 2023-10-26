@@ -52,47 +52,52 @@ class S3List:
         s3_creds = self.get_creds(s3_endpoint, edl_username, edl_password)
 
         ssm_client = boto3.client('ssm', region_name="us-west-2")
-        try:
-            response = ssm_client.put_parameter(
-                Name="s3_creds_key",
-                Description="Temporary SWOT S3 bucket key",
-                Value=s3_creds["accessKeyId"],
-                Type="SecureString",
-                KeyId=key,
-                Overwrite=True,
-                Tier="Standard"
-            )
-            response = ssm_client.put_parameter(
-                Name="s3_creds_secret",
-                Description="Temporary SWOT S3 bucket secret",
-                Value=s3_creds["secretAccessKey"],
-                Type="SecureString",
-                KeyId=key,
-                Overwrite=True,
-                Tier="Standard"
-            )
-            response = ssm_client.put_parameter(
-                Name="s3_creds_token",
-                Description="Temporary SWOT S3 bucket token",
-                Value=s3_creds["sessionToken"],
-                Type="SecureString",
-                KeyId=key,
-                Overwrite=True,
-                Tier="Standard"
-            )
-            response = ssm_client.put_parameter(
-                Name="s3_creds_expiration",
-                Description="Temporary SWOT S3 bucket expiration",
-                Value=s3_creds["expiration"],
-                Type="SecureString",
-                KeyId=key,
-                Overwrite=True,
-                Tier="Standard"
-            )
-        except botocore.exceptions.ClientError as error:
-            raise error
-        else:
-            return s3_creds
+
+        retry_cnt = 5
+        while retry_cnt != 0:
+            try:
+                response = ssm_client.put_parameter(
+                    Name="s3_creds_key",
+                    Description="Temporary SWOT S3 bucket key",
+                    Value=s3_creds["accessKeyId"],
+                    Type="SecureString",
+                    KeyId=key,
+                    Overwrite=True,
+                    Tier="Standard"
+                )
+                response = ssm_client.put_parameter(
+                    Name="s3_creds_secret",
+                    Description="Temporary SWOT S3 bucket secret",
+                    Value=s3_creds["secretAccessKey"],
+                    Type="SecureString",
+                    KeyId=key,
+                    Overwrite=True,
+                    Tier="Standard"
+                )
+                response = ssm_client.put_parameter(
+                    Name="s3_creds_token",
+                    Description="Temporary SWOT S3 bucket token",
+                    Value=s3_creds["sessionToken"],
+                    Type="SecureString",
+                    KeyId=key,
+                    Overwrite=True,
+                    Tier="Standard"
+                )
+                response = ssm_client.put_parameter(
+                    Name="s3_creds_expiration",
+                    Description="Temporary SWOT S3 bucket expiration",
+                    Value=s3_creds["expiration"],
+                    Type="SecureString",
+                    KeyId=key,
+                    Overwrite=True,
+                    Tier="Standard"
+                )
+                retry_cnt = 0
+            except:
+                retry_cnt -= 1
+
+
+        return s3_creds
 
     def login(self):
         """Log into Earthdata and set up request library to track cookies.
