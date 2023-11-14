@@ -33,9 +33,9 @@ class Sets:
         self.sword_dataset=sword_dataset
 
     def extract_data_sword_continent_file(self):
-         """
-         Extracting data that is used to defind sets from SWORD
-         """
+        """
+        Extracting data that is used to defind sets from SWORD
+        """
 
         swordreachids=self.sword_dataset["reaches/reach_id"][:]
 

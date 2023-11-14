@@ -191,7 +191,7 @@ def extract_ids(shpfiles, creds, pass_list_data = False):
     return shp_list, reach_ids, node_ids
 
 def extract_ids_local(shapefiledir, cont, outdir):
-        """Extract reach identifiers from shapefile names and return a list.
+    """Extract reach identifiers from shapefile names and return a list.
     
     Parameters
     ----------
@@ -208,6 +208,7 @@ def extract_ids_local(shapefiledir, cont, outdir):
     reach_ids = []
     node_ids = []
     shp_files = []
+    reach_id_s3 = {}
     with os.scandir(Path(shapefiledir)) as shpfiles:
         for shpfile in shpfiles:
             if cont in shpfile.name:    # Filter by continent
@@ -221,6 +222,11 @@ def extract_ids_local(shapefiledir, cont, outdir):
                     if "Reach" in shpfile.name:
                         reach_id = {rec["reach_id"] for rec in records}
                         reach_ids.extend(list(reach_id))
+                        for rid in reach_id:
+                            if rid in reach_id_s3.keys():
+                                reach_id_s3[rid].append(shpfile)
+                            else:
+                                reach_id_s3[rid] = shpfile
                     if "Node" in shpfile.name:
                         node_id = {rec["node_id"] for rec in records}
                         node_ids.extend(list(node_id))
@@ -230,11 +236,12 @@ def extract_ids_local(shapefiledir, cont, outdir):
     reach_ids.sort()
     node_ids = list(set(node_ids))
     node_ids.sort()
+    rids_shp = {reach_id: sorted(reach_id_s3[reach_id]) for reach_id in sorted(reach_id_s3)}
     shp_files.sort(key=sort_shapefiles)
     shp_json = [ str(Path(shapefiledir).joinpath(shp)) for shp in shp_files ]
     json_file = Path(outdir).joinpath(update_json_filename(conf["s3_list_local"], cont))
     write_json(shp_json, json_file)
-    return shp_files, reach_ids, node_ids
+    return shp_files, reach_ids, node_ids, rids_shp
 
 def extract_s3_uris(s3_uris, s3_creds, s3_endpoint,  args, reach_list = False, pass_list_data = False):
     """Extract S3 URIs from reach file subset."""
@@ -243,6 +250,7 @@ def extract_s3_uris(s3_uris, s3_creds, s3_endpoint,  args, reach_list = False, p
     reach_ids = []
     node_ids = []
     shp_files = []
+    reach_id_s3 = {}
     print('just before filtering')
     print(s3_uris)
     cnt = 0
@@ -287,15 +295,22 @@ def extract_s3_uris(s3_uris, s3_creds, s3_endpoint,  args, reach_list = False, p
                                 records = sf.records()
                                 if "Reach" in shpfile:
                                     shp_reaches = {rec["reach_id"] for rec in records}
+                                    rids = shp_reaches
                                     if reach_list:
                                         reach_intersection = [ value for value in shp_reaches if value in reach_list ]
                                         if len(reach_intersection) > 0:
                                             shp_files.append(shpfile)
                                             reach_ids.extend(reach_intersection)
+                                            rids = reach_intersection
                                     else:
                                         shp_files.append(shpfile)
                                         reach_ids.extend(shp_reaches)
                                         # reach_ids.extend(reach_intersection)
+                                    for reach_id in rids:
+                                        if reach_id in reach_id_s3.keys():
+                                            reach_id_s3[reach_id].append(shpfile)
+                                        else:
+                                            reach_id_s3[reach_id] = [shpfile]
 
                                     
                                 if "Node" in shpfile:
@@ -334,7 +349,8 @@ def extract_s3_uris(s3_uris, s3_creds, s3_endpoint,  args, reach_list = False, p
     shp_files.sort(key=sort_shapefiles)
     print('returning these shapefiles')
     print(shp_files)
-    return shp_files, reach_ids, node_ids
+    rid_s3 = {reach_id: sorted(reach_id_s3[reach_id]) for reach_id in sorted(reach_id_s3)}
+    return shp_files, reach_ids, node_ids, rid_s3
 
 def extract_s3_uris_local(shapefiledir, cont, outdir, reach_list):
     """Extract S3 URIs from reach file subset."""
@@ -344,6 +360,7 @@ def extract_s3_uris_local(shapefiledir, cont, outdir, reach_list):
     reach_ids = []
     node_ids = []
     shp_files = []
+    reach_id_s3 = {}
     with os.scandir(Path(shapefiledir)) as shpfiles:
         for shpfile in shpfiles:
             if cont in shpfile.name:    # Filter by continent
@@ -359,6 +376,11 @@ def extract_s3_uris_local(shapefiledir, cont, outdir, reach_list):
                         if len(reach_intersection) > 0:
                             shp_files.append(shpfile.name)
                             reach_ids.extend(reach_intersection)
+                            for rid in reach_id:
+                                if rid in reach_id_s3.keys():
+                                    reach_id_s3[rid].append(shpfile)
+                                else:
+                                    reach_id_s3[rid] = shpfile
                     if "Node" in shpfile.name:
                         node_id = {rec["node_id"] for rec in records}
                         for reach_id in reach_list:
@@ -371,13 +393,14 @@ def extract_s3_uris_local(shapefiledir, cont, outdir, reach_list):
     node_ids = list(set(node_ids))
     node_ids.sort()
     shp_files.sort(key=sort_shapefiles)
+    rid_s3 = {reach_id: sorted(reach_id_s3[reach_id]) for reach_id in sorted(reach_id_s3)}
     
     # Write JSON file
     shp_json = [ str(Path(shapefiledir).joinpath(shp)) for shp in shp_files ]
     json_file = Path(outdir).joinpath(update_json_filename(conf["s3_list_local"], cont))
     write_json(shp_json, json_file)
     
-    return shp_files, reach_ids, node_ids
+    return shp_files, reach_ids, node_ids, rids_s3
 
 def get_continent(index, json_file):
     """Retrieve continent to run datagen operations for."""
@@ -458,13 +481,17 @@ def run_aws(args, cont, subset, reach_list = False, pass_list_data = False):
     # else:
     #     print("Extracting shapefiles and node identifiers from subset.")
     #     # extract_s3_uris(s3_uris, s3_creds, s3_endpoint,  args, reach_list = False, pass_list_data = False):
-    s3_uris, reach_ids, node_ids = extract_s3_uris(s3_uris= s3_uris, s3_creds = s3_creds, args = args, s3_endpoint = s3_endpoint, reach_list=reach_list, pass_list_data=pass_list_data)
+    s3_uris, reach_ids, node_ids, rid_s3 = extract_s3_uris(s3_uris= s3_uris, s3_creds = s3_creds, args = args, s3_endpoint = s3_endpoint, reach_list=reach_list, pass_list_data=pass_list_data)
     
 
     
     # Write shapefile json
     json_file = Path(args.directory).joinpath(update_json_filename(conf["s3_list"], cont))
     write_json(s3_uris, json_file)
+    
+    # Write reach id S3 json
+    json_file = Path(args.directory).joinpath(f"s3_reach_{cont.lower()}.json")
+    write_json(rid_s3, json_file)
     
     # Creat a list of only shapfile names
     shp_files = [shp.split('/')[-1].split('.')[0] for shp in s3_uris]
@@ -482,11 +509,14 @@ def run_local(args, cont, subset, reach_list=None):
     
     # Extract reach identifiers
     if subset == False:
-        shp_files, reach_ids, node_ids = extract_ids_local(args.shapefiledir, cont, args.directory)
+        shp_files, reach_ids, node_ids, rids_shp = extract_ids_local(args.shapefiledir, cont, args.directory)
     
     # Extract shapefiles and node identifiers for reach identifier subset
     else:
-        shp_files, reach_ids, node_ids = extract_s3_uris_local(args.shapefiledir, cont, args.directory, reach_list)
+        shp_files, reach_ids, node_ids, rids_shp = extract_s3_uris_local(args.shapefiledir, cont, args.directory, reach_list)
+        
+    json_file = Path(args.directory).joinpath(f"s3_reach_{cont.lower()}.json")
+    write_json(rids_shp, json_file)
     
     return shp_files, reach_ids, node_ids
 
