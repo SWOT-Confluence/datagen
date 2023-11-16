@@ -56,7 +56,7 @@ docker run --rm --name datagen -e AWS_ACCESS_KEY_ID=$aws_key -e AWS_SECRET_ACCES
 
 ## deployment
 
-There is a script to deploy the Docker container image and Terraform AWS infrastructure found in the `deploy` directory. 
+There is a script to deploy the Docker container image and Terraform AWS infrastructure found in the `deploy` directory.
 
 Script to deploy Terraform and Docker image AWS infrastructure
 
