@@ -40,4 +40,5 @@ resource "aws_batch_job_definition" "generate_batch_jd_datagen" {
    retry_strategy {
     attempts = 3
   }
+  tags = { "job_definition": "${var.prefix}-datagen" }
 }
