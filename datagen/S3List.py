@@ -144,20 +144,6 @@ class S3List:
         except botocore.exceptions.ClientError as error:
             raise error
 
-
-        # Post a token request and return resonse
-        # token_url = f"https://{self.CMR}/legacy-services/rest/tokens"
-        # token_xml = (f"<token>"
-        #                 f"<username>{username}</username>"
-        #                 f"<password>{password}</password>"
-        #                 f"<client_id>{client_id}</client_id>"
-        #                 f"<user_ip_address>{ip_address}</user_ip_address>"
-        #             f"</token>")
-        # headers = {"Content-Type" : "application/xml", "Accept" : "application/json"}
-        # print(requests.post(url=token_url, data=token_xml, headers=headers))
-        # self._token = requests.post(url=token_url, data=token_xml, headers=headers) \
-        #     .json()["token"]["id"]
-
     def delete_token(self):
         """Delete CMR authentication token."""
 
@@ -169,7 +155,7 @@ class S3List:
         except Exception as e:
             raise Exception(f"Failed to delete token: {e}.")
 
-    def run_query(self, shortname, provider, temporal_range):
+    def run_query(self, shortname, provider, temporal_range, continent):
         """Run query on collection referenced by shortname from provider."""
 
         url = f"https://{self.CMR}/search/granules.umm_json"
@@ -182,18 +168,21 @@ class S3List:
                     "sort_key" : "start_date",
                     "temporal" : temporal_range
                 }
-        res = requests.get(url=url, params=params)
-        # print(res)        
+        res = requests.get(url=url, params=params)      
         coll = res.json()
-        # print('coll')
-        # print(coll)
-        # print('all')
         all_urls = [url["URL"] for res in coll["items"] for url in res["umm"]["RelatedUrls"] if url["Type"] == "GET DATA VIA DIRECT ACCESS"]
-        # print(all_urls)
-        all_urls = [url for url in all_urls if url[-3:] == 'zip']
-        return all_urls
+        s3_urls = list(filter(lambda url: self.continent_filter(url, continent), all_urls))
+        return s3_urls
     
-    def login_and_run_query(self, short_name, provider, temporal_range, s3_endpoint, key):
+    def continent_filter(self, url, continent):
+        """Filter by continent and for zip files."""
+        
+        if continent in url and url[-3:] == 'zip':
+            return True
+        else:
+            return False
+    
+    def login_and_run_query(self, short_name, provider, temporal_range, continent, s3_endpoint, key):
         """Log into CMR and run query to retrieve a list of S3 URLs."""
 
         try:
@@ -206,7 +195,7 @@ class S3List:
             self.get_token(client_id, ip_addr, username, password)
 
             # Run query
-            s3_urls = self.run_query(short_name, provider, temporal_range)
+            s3_urls = self.run_query(short_name, provider, temporal_range, continent)
 
             # Clean up and delete token
             self.delete_token()
@@ -229,13 +218,7 @@ class S3List:
             creds["sessionToken"] = ssm_client.get_parameter(Name="s3_creds_token", WithDecryption=True)["Parameter"]["Value"]
         except botocore.exceptions.ClientError as e:
             raise e
-        
-        # s3 = boto3.client("s3",
-        #                   aws_access_key_id=creds["accessKeyId"],
-        #                   aws_secret_access_key=creds["secretAccessKey"],
-        #                   aws_session_token=creds["sessionToken"])
-
-
+    
         session = boto3.Session(
             aws_access_key_id=creds["accessKeyId"],
             aws_secret_access_key=creds["secretAccessKey"],
