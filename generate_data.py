@@ -451,7 +451,6 @@ def run_aws(args, cont, subset, reach_list = False, pass_list_data = False):
         exit(1)
 
     if s3_uris:
-        s3_uris = s3_uris[:10]
         s3_uris, reach_ids, node_ids, rid_s3 = extract_s3_uris(s3_uris= s3_uris, s3_creds=s3_creds, 
                                                             args=args, continent=cont,
                                                             s3_endpoint=s3_endpoint, 
