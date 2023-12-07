@@ -9,6 +9,7 @@ from urllib import request
 import boto3
 import botocore
 import requests
+import fnmatch
 
 class S3List:
     """Class used to query and download from PO.DAAC's CMR API."""
@@ -193,6 +194,32 @@ class S3List:
         all_urls = [url for url in all_urls if url[-3:] == 'zip']
         return all_urls
     
+    def parse_duplicate_files(self, s3_urls:list):
+
+        """
+        In some cases, when shapefiles are processed more than once they leave both processings in the bucket, so we need to filter them.
+
+        """
+        parsed = []
+
+        for i in s3_urls:
+            # print(i[:-6])
+            # mult_process_bool = False
+            all_processings = fnmatch.filter(s3_urls, i[:-6]+'*')
+            if len(all_processings) > 1:
+                all_processings_nums = [int(i[-6:].replace('.zip', '')) for i in all_processings]
+                padded_max = str("{:02d}".format(max(all_processings_nums)))
+                max_path = fnmatch.filter(all_processings, f'*{padded_max}.zip')
+                parsed.append(max_path[0])
+                print('found a double')
+            else:
+                parsed.append(i)
+
+        parsed = list(set(parsed))
+        return parsed
+
+
+
     def login_and_run_query(self, short_name, provider, temporal_range, s3_endpoint, key):
         """Log into CMR and run query to retrieve a list of S3 URLs."""
 
@@ -210,6 +237,10 @@ class S3List:
 
             # Clean up and delete token
             self.delete_token()
+
+            # parse s3_urls 
+            s3_urls = self.parse_duplicate_files(s3_urls = s3_urls)
+
                         
         except Exception as error:
             raise error
