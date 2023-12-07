@@ -191,7 +191,7 @@ def extract_ids(shpfiles, creds, pass_list_data = False):
     return shp_list, reach_ids, node_ids
 
 def extract_ids_local(shapefiledir, cont, outdir):
-        """Extract reach identifiers from shapefile names and return a list.
+    """Extract reach identifiers from shapefile names and return a list.
     
     Parameters
     ----------
