@@ -164,24 +164,7 @@ def extract_ids(shpfiles, creds, pass_list_data = False):
                         if "Node" in shpfile: 
                             node_id = {rec["node_id"] for rec in records}
                             node_ids.extend(list(node_id)) 
-                            shp_list.append(shpfile)
-
-
-
-                    #                     with zip_file.open(dbf_file) as dbf:
-                    # sf = shapefile.Reader(dbf=dbf)
-                    # records = sf.records()
-                    # if "Reach" in shpfile:
-                    #     shp_reaches = {rec["reach_id"] for rec in records}
-                    #     reach_intersection = [ value for value in shp_reaches if value in reach_list ]
-                    #     if len(reach_intersection) > 0:
-                    #         shp_files.append(shpfile)
-                    #         reach_ids.extend(reach_intersection)
-                    # if "Node" in shpfile:
-                    #     node_id = {rec["node_id"] for rec in records}
-                    #     for reach_id in reach_list:
-                    #         reach_r = re.compile(f"^{reach_id[:10]}.*")
-                    #         node_ids.extend(list(filter(reach_r.match, node_id)))           
+                            shp_list.append(shpfile)     
             
     # Remove duplicates from multiple files
     reach_ids = list(set(reach_ids))
@@ -245,9 +228,11 @@ def extract_ids_local(shapefiledir, cont, outdir):
 
 def extract_s3_uris(s3_uris, s3_creds, s3_endpoint,  args, continent,
                     reach_list=False, pass_list_data=False):
-    """Extract S3 URIs from reach file subset."""
+    """Extract S3 URIs from reach file subset.
     
-    # Open shapefiles and locate reach and node identifiers
+    Open shapefiles and locate reach and node identifiers.
+    """
+    
     reach_ids = []
     node_ids = []
     shp_files = []
@@ -256,19 +241,20 @@ def extract_s3_uris(s3_uris, s3_creds, s3_endpoint,  args, continent,
     print(s3_uris)
     cnt = 0
     for shpfile in s3_uris:
-        # Open S3 zip file
+
+        # Try to access S3 shapefiles with credentials 3 times
         retry_num = 3
         while retry_num != 0:
             try:
                 with fsspec.open(f"{shpfile}", mode="rb", anon=False, 
                     key=s3_creds["accessKeyId"], secret=s3_creds["secretAccessKey"], 
                     token=s3_creds["sessionToken"]) as shpfh:
-                                  # Locate and open DBF file
+                    
+                    # Locate and open DBF file
                     dbf_file = f"{shpfile.split('/')[-1].split('.')[0]}.dbf"
-                                # check to see if we should process, we only process things from sword 15
+                    
+                    # Check to see if we should process, we only process things from sword 15
                     xml_fp = dbf_file.replace('.dbf', '.shp.xml') 
-        
-
                     zip_file = zipfile.ZipFile(shpfh, 'r')
                     with zip_file.open(xml_fp, 'r') as f:
                         data = f.read()
@@ -276,6 +262,8 @@ def extract_s3_uris(s3_uris, s3_creds, s3_endpoint,  args, continent,
                     b_unique = bs_data.find_all('xref_prior_river_db_files')
                     sword_version = str(b_unique[0]).split('>')[1].split(',')[0].split('_')[-1].split('.')[0][2:]
                     pass_number = str(os.path.basename(shpfile)).split('_')[6]
+                    
+                    # If processing SWORD 15 and pass is in pass data then proceed with extracting reach and node IDs
                     if sword_version == '15':
                         correct_pass = False
                         if pass_list_data:
@@ -294,6 +282,8 @@ def extract_s3_uris(s3_uris, s3_creds, s3_endpoint,  args, continent,
                             with zip_file.open(dbf_file) as dbf:
                                 sf = shapefile.Reader(dbf=dbf)
                                 records = sf.records()
+                                
+                                # Extract REACH data
                                 if "Reach" in shpfile:
                                     shp_reaches = {rec["reach_id"] for rec in records}
                                     rids = shp_reaches
@@ -308,16 +298,13 @@ def extract_s3_uris(s3_uris, s3_creds, s3_endpoint,  args, continent,
                                         reach_ids.extend(shp_reaches)
                                         # reach_ids.extend(reach_intersection)
                                     for reach_id in rids:
-                                        if reach_id in reach_id_s3.keys():
-                                            reach_id_s3[reach_id].append(shpfile)
-                                        else:
-                                            reach_id_s3[reach_id] = [shpfile]
+                                        track_s3_uris(reach_id_s3, reach_id, shpfile)
 
-                                    
+                                # Extract NODE data    
                                 if "Node" in shpfile:
                                     if cnt == 0:
-                                        print('recognized node shp')
-                                        print(shpfile)
+                                        # print('recognized node shp')
+                                        # print(shpfile)
                                         cnt = 999
                                     node_id = {rec["node_id"] for rec in records}
                                     if reach_list:
@@ -325,11 +312,14 @@ def extract_s3_uris(s3_uris, s3_creds, s3_endpoint,  args, continent,
                                             reach_r = re.compile(f"^{reach_id[:10]}.*")
                                             node_ids.extend(list(filter(reach_r.match, node_id)))
                                             shp_files.append(shpfile)
+                                            track_s3_uris(reach_id_s3, reach_id, shpfile)
                                     else:
                                         node_id = {rec["node_id"] for rec in records}
                                         node_ids.extend(list(node_id)) 
                                         shp_files.append(shpfile)
-
+                                        for n in node_id:
+                                            rid = f"{n[:10]}{n[-1]}"
+                                            track_s3_uris(reach_id_s3, rid, shpfile)
                 retry_num = 0
             except Exception as e:
                 print(e)
@@ -338,7 +328,7 @@ def extract_s3_uris(s3_uris, s3_creds, s3_endpoint,  args, continent,
                 s3_uris, s3_creds = s3_list.login_and_run_query(args.shortname, args.provider, args.temporalrange, continent, s3_endpoint, args.ssmkey)
                 retry_num -= 1
 
-    # Sort and remove duplicates
+    # Sort and remove duplicates from reaches, nodes, and shapefiles
     reach_ids = list(set(reach_ids))
     reach_ids.sort()
     node_ids = list(set(node_ids))
@@ -349,6 +339,14 @@ def extract_s3_uris(s3_uris, s3_creds, s3_endpoint,  args, continent,
     print(shp_files)
     rid_s3 = {reach_id: sorted(reach_id_s3[reach_id]) for reach_id in sorted(reach_id_s3)}
     return shp_files, reach_ids, node_ids, rid_s3
+
+def track_s3_uris(reach_id_s3, rid, shpfile):
+    """Update reach_id_s3 dictionary with shapefile URI."""
+    
+    if rid in reach_id_s3.keys():
+        if shpfile not in reach_id_s3[rid]: reach_id_s3[rid].append(shpfile)
+    else:
+        reach_id_s3[rid] = [shpfile]
 
 def extract_s3_uris_local(shapefiledir, cont, outdir, reach_list):
     """Extract S3 URIs from reach file subset."""
