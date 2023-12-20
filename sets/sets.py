@@ -237,17 +237,17 @@ class Sets:
              numReaches=len(ReachList)
         return ReachList,numReaches
 
-    def remove_duplicate_sets(self,InversionSets,swordreachids,sword_data_continent):
+    def remove_duplicate_or_high_overlap_sets(self,InversionSets,swordreachids,sword_data_continent):
        print('removing dupes...')
        InversionSetsList=self.get_IS_list(InversionSets,'','')
 
        InversionSetsListNoDupes=[]
        for InversionSet in InversionSetsList:
-           SetAlreadyIncluded=False
+           SetAlreadyIncluded_or_HighOverlap=False
            for ISnew in InversionSetsListNoDupes:
-               if self.CheckSetsAreSame(InversionSet,ISnew):
-                   SetAlreadyIncluded=True
-           if not SetAlreadyIncluded:
+               if self.CheckSetsAreSame_or_HighOverlap(InversionSet,ISnew):
+                   SetAlreadyIncluded_or_HighOverlap=True
+           if not SetAlreadyIncluded_or_HighOverlap:
                InversionSetsListNoDupes.append(InversionSet)
 
                
@@ -260,18 +260,6 @@ class Sets:
        for InversionSet in InversionSetsListNoDupes:
            setkey+=1
            ReachList=self.MakeReachList(InversionSet)
-           roi = [
-                "23214400013",
-                "23214400021",
-                "23214400031",
-                "23214400041",
-                "23214400051",
-                "23214400061"
-                ]
-           str_sets = [str(i) for i in ReachList]
-           for reach in roi:
-                if reach in str_sets:
-                    print(reach)
 
            #setkey=InversionSet[0]['reach_id']
            InversionSetsNoDupes[setkey]={}
@@ -291,29 +279,25 @@ class Sets:
        return InversionSetsNoDupes
 
     #function to check for duplicates
-    def CheckSetsAreSame(self,Set1,Set2):
+    def CheckSetsAreSame_or_HighOverlap(self,Set1,Set2):
         SetsAreSame=False
         if len(Set1)==len(Set2):
             Set1List=self.MakeReachList(Set1)
-            Set2List=self.MakeReachList(Set2)
-            # roi = [
-            # "23214400013",
-            # "23214400021",
-            # "23214400031",
-            # "23214400041",
-            # "23214400051",
-            # "23214400061"
-            # ]
-            # str_sets = [str(i) for i in Set1List]
-            # for reach in roi:
-            #     if reach in str_sets:
-            #         print(Set2List, '')
-            #         print('')
-            #         print(Set1List)
-                    
+            Set2List=self.MakeReachList(Set2)               
         
             if Set1List==Set2List:
                 SetsAreSame=True
+
+            if not SetsAreSame:
+                
+                # if they are not the same, test for overlap
+                overlap = list( set(Set1List) & set(Set2List))
+                pctoverlap= len(overlap) / ( (len(Set1List) + len(Set2List))/2 )
+
+                #if pctoverlap > 0.67:
+                if pctoverlap > self.params['AllowedReachOverlap']:
+                    #print('removing set with overlap=',pctoverlap,'for',combo[1])
+                    SetsAreSame = True
         
         return SetsAreSame
 
@@ -325,18 +309,6 @@ class Sets:
         
         #sort does ascending by default. reverse goes descending, from upstream to downstream in SWORD
         ReachList.sort(reverse=True) 
-
-        # roi = [
-        # "23214400013",
-        # "23214400021",
-        # "23214400031",
-        # "23214400041",
-        # "23214400051",
-        # "23214400061"
-        # ]
-        # for reach in roi:
-        #     if reach in ReachList:
-        #         contains_roi = True
 
         
         return ReachList
@@ -590,24 +562,26 @@ class Sets:
         # print(sword_data_continent,swordreachids)
         InversionSets=self.extract_inversion_sets_by_reach(sword_data_continent,swordreachids)
 
-        # remove duplicate sets
-        print('removing overlapping sets...')
-        InversionSets=self.remove_duplicate_sets(InversionSets,swordreachids,sword_data_continent)
-        if self.params['AllowedReachOverlap'] > 0.:
-            InversionSets=self.remove_high_overlap_sets(InversionSets)
-
         # remove sets with non-river reaches
         print('removing sets with non-river reaches...')
         InversionSets=self.remove_sets_with_non_river_reaches(InversionSets)
+
+        # remove sets with too few reaches
+        print('removing sets with too few reaches...')
+        InversionSets=self.remove_small_sets(InversionSets)
+
+        # remove duplicate sets
+        print('removing overlapping or high overlap sets...')
+        InversionSets=self.remove_duplicate_or_high_overlap_sets(InversionSets,swordreachids,sword_data_continent)
+
+        # # Removing high overlap sets
+        # if self.params['AllowedReachOverlap'] > 0.:
+        #     InversionSets=self.remove_high_overlap_sets(InversionSets)
 
         # add single-reach sets to ensure all reaches are in a set (if specified in option)
         if self.params['MinimumReaches']==1:
             print('adding in sets with a single reach...')
             InversionSets=self.add_single_reach_sets(InversionSets,swordreachids,sword_data_continent)
-
-        # remove sets with too few reaches
-        print('removing sets with too few reaches...')
-        InversionSets=self.remove_small_sets(InversionSets)
 
         # stats
         print('print stats...')
