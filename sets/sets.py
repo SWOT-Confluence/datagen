@@ -243,7 +243,7 @@ class Sets:
 
        InversionSetsListNoDupes=[]
        for InversionSet in InversionSetsList:
-           SetAlreadyIncluded=False
+           SetAlreadyIncluded_or_HighOverlap=False
            for ISnew in InversionSetsListNoDupes:
                if self.CheckSetsAreSame_or_HighOverlap(InversionSet,ISnew):
                    SetAlreadyIncluded_or_HighOverlap=True
