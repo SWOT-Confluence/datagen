@@ -29,7 +29,7 @@ from datagen.Reach import Reach
 from datagen.ReachNode import ReachNode
 from datagen.S3List import S3List
 from sets.getAllSets import main as set_main
-from datagen.Ssc import ssc_process_continent
+import datagen.Ssc as ssc
 
 def apply_reach_patch(sword_dataset, swordpatch):
     """Apply reach level changes two the new copy of SWORD with the suffix _patch.nc
@@ -571,8 +571,9 @@ def run_river(args):
 
     # Create ssc mapping
     print("Retrieving HLS tiles.")
-    json_file = Path(outdir).joinpath(update_json_filename(conf["hls_links"], cont))
-    hls_link_data = ssc_process_continent(reach_ids, cont)
+    swordfilepath = os.path.join(INPUT_DIR,'sword', sword_filename)
+    json_file = Path(args.directory).joinpath(update_json_filename(conf["hls_links"], cont))
+    hls_link_data = ssc.ssc_process_continent(reach_ids, cont, swordfilepath)
     write_json(hls_link_data, json_file)
 
 if __name__ == "__main__":
