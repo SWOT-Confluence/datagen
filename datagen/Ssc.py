@@ -173,7 +173,7 @@ def ssc_process_continent(reach_ids, cont, data_dir):
 
     flatten_list = list(chain.from_iterable(result))
     flatten_list = list(set(flatten_list))
-    no_bands = list(set([i[:10] for i in flatten_list]))
+    no_bands = list(set([i[:-10] for i in flatten_list]))
     print(f'Found {len(no_bands)} scenes for {cont}...')
     return no_bands
 

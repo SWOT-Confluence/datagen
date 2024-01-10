@@ -570,11 +570,12 @@ def run_river(args):
     set_main(args, cont)
 
     # Create ssc mapping
-    print("Retrieving HLS tiles.")
-    swordfilepath = os.path.join(INPUT_DIR,'sword', sword_filename)
-    json_file = Path(args.directory).joinpath(update_json_filename(conf["hls_links"], cont))
-    hls_link_data = ssc.ssc_process_continent(reach_ids, cont, swordfilepath)
-    write_json(hls_link_data, json_file)
+    if args.hls:
+        print("Retrieving HLS tiles.")
+        swordfilepath = os.path.join(INPUT_DIR,'sword', sword_filename)
+        json_file = Path(args.directory).joinpath(update_json_filename(conf["hls_links"], cont))
+        hls_link_data = ssc.ssc_process_continent(reach_ids, cont, swordfilepath)
+        write_json(hls_link_data, json_file)
 
 if __name__ == "__main__":
     import datetime
