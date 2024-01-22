@@ -93,7 +93,7 @@ def create_args():
                             "--swordpatch",
                             help="Path to JSON file that patches SWORD topology issues",
                             type=str)
-    arg_parser.add_argument("-h",
+    arg_parser.add_argument("-b",
                             "--hls",
                             help="indicate the generation of hls target files for ssc prediction",
                             action="store_true")
