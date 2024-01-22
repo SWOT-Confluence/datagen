@@ -7,6 +7,7 @@ conf = {
     "reach_node": "reach_node.json",
     "s3_list": "s3_list.json",
     "s3_list_local": "s3_list_local.json",
+    "hls_links": "hls_links.json",
     "s3_cred_endpoints": {
         'POCLOUD':'https://archive.swot.podaac.earthdata.nasa.gov/s3credentials',
         'lpdaac':'https://data.lpdaac.earthdatacloud.nasa.gov/s3credentials',
