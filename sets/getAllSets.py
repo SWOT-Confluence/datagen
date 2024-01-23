@@ -54,8 +54,8 @@ def main(args=None, continent=None):
         OUTPUT_DIR = Path("/data")
         swordfilepath=INPUT_DIR.joinpath("sword")
     else:
-        INPUT_DIR = Path("/Users/mtd/Analysis/SWOT/Discharge/Confluence/local_run/make_sets/data/")
-        OUTPUT_DIR = Path("/Users/mtd/Analysis/SWOT/Discharge/Confluence/local_run/make_sets/data/")
+        INPUT_DIR = Path("/data/")
+        OUTPUT_DIR = Path("/data/")
         swordfilepath=INPUT_DIR.joinpath("sword")
 
     # read in file with all reaches to run
