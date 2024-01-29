@@ -5,7 +5,7 @@ FROM python:3.9-slim-buster
 # Stage 1 - Debian dependencies
 # FROM stage0 as stage1
 RUN apt update \
-        && DEBIAN_FRONTEND=noninteractive apt install -y curl zip python3-dev build-essential libhdf5-serial-dev netcdf-bin libnetcdf-dev
+        && DEBIAN_FRONTEND=noninteractive apt install -y curl zip python3-dev build-essential libhdf5-serial-dev netcdf-bin libnetcdf-dev wget
 
 # # Stage 2 - Input Python dependencies
 # # FROM stage1 as stage2

@@ -11,6 +11,7 @@ from pathlib import Path
 import re
 import traceback
 import zipfile
+import subprocess as sp
 
 # Third-party imports
 import fsspec
@@ -255,7 +256,18 @@ def extract_ids_local(shapefiledir, cont, outdir):
     write_json(shp_json, json_file)
     return shp_files, reach_ids, node_ids
 
-def extract_s3_uris(s3_uris, s3_endpoint,  args, sword_path, reach_list = False, pass_list_data = False, reach_map = False):
+def download_shps(shapefile_list:list, shpfile_dir:str):
+
+        # https://archive.swot.podaac.earthdata.nasa.gov/podaac-swot-ops-cumulus-protected/SWOT_L2_HR_RiverSP_1.1/SWOT_L2_HR_RiverSP_Reach_502_027_SI_20230426T162930_20230426T162932_PIB0_01.zip
+        podaac_address = 'https://archive.swot.podaac.earthdata.nasa.gov/'
+        http_shapefile_list = [i.replace('s3://', podaac_address) for i in shapefile_list]
+        # new_fullpath = 
+        [sp.run(['wget', shapefile, '-P', shpfile_dir]) for shapefile in http_shapefile_list if not os.path.exists(os.path.join(shpfile_dir, os.path.basename(shapefile)))]
+        return [os.path.join(shpfile_dir, os.path.basename(shapefile)) for shapefile in http_shapefile_list][0]
+def delete_shp(shapefile):
+    sp.run(['rm', shapefile])
+
+def extract_s3_uris(s3_uris, s3_endpoint,  args, sword_path,input_dir, reach_list = False, pass_list_data = False, hpc = False):
     """Extract S3 URIs from reach file subset."""
     
     # Open shapefiles and locate reach and node identifiers
@@ -266,108 +278,135 @@ def extract_s3_uris(s3_uris, s3_endpoint,  args, sword_path, reach_list = False,
     print(s3_uris)
     sword_data = netCDF4.Dataset(sword_path)
     cnt = 0
-    if reach_map:
-        print('running with reach map')
-        reach_map_data = pd.read_csv(reach_map)
-    int_reach_list = [int(i) for i in reach_list]
+    # if reach_map:
+    #     print('running with reach map')
+    #     reach_map_data = pd.read_csv(reach_map)
+    # int_reach_list = [int(i) for i in reach_list]
+    # if hpc:
+    #     # if we are on the hpc, download all of the cont tiles
+    #     print('Running on hpc')
+    #     shpfile_dir = os.path.join(input_dir, 'swot', 'shps')
+    #     s3_uris = download_shps(s3_uris, shpfile_dir)
+
+
+
     for shpfile in s3_uris:
+        if hpc:
 
-        if reach_map and reach_list:
-            pass_number = str(os.path.basename(shpfile)).split('_')[6]
-            reach_map_selection = reach_map_data[reach_map_data['reach_id'].isin(int_reach_list)]
-            # print('reach_map_selection', reach_map_selection)
-            reach_map_selection = reach_map_selection[reach_map_selection['pass'] == str(int(pass_number))]
-            # print('map selection', reach_map_selection)
-            if len(reach_map_selection) > 1:
-                all_reaches_in_shp = list(set([str(i) for i in reach_map_selection['reach_id']]))
-                shp_files.append(shpfile)
-
-                # doing it in this order so that the nodes do not get processed more than once
-                if 'Node' in shpfile:
-                    for reach_id in all_reaches_in_shp:
-                        if reach_id not in reach_ids:
-                            print('Finding nodes for reach', reach_id)
-                            node_list = get_reach_nodes(sword_data, reach_id)
-                            node_ids.extend(node_list)
-                            print('Found', len(node_list), 'nodes...')
-                reach_ids.extend(all_reaches_in_shp)
+            print('Running on hpc')
+            shpfile_dir = os.path.join(input_dir, 'swot', 'shps')
+            shpfile = download_shps([shpfile], shpfile_dir)
+            print('processing', shpfile)
 
 
-            
-        else:
-                    # Open S3 zip file
-            retry_num = 3
-            while retry_num != 0:
-                try:
-            
-                    with fsspec.open(f"{shpfile}", mode="rb") as shpfh:
-                                        # Locate and open DBF file
-                        dbf_file = f"{shpfile.split('/')[-1].split('.')[0]}.dbf"
-                                    # check to see if we should process, we only process things from sword 15
-                        xml_fp = dbf_file.replace('.dbf', '.shp.xml') 
 
 
-                        zip_file = zipfile.ZipFile(shpfh, 'r')
-                        with zip_file.open(xml_fp, 'r') as f:
-                            data = f.read()
-                        bs_data = BeautifulSoup(data, "xml")
-                        b_unique = bs_data.find_all('xref_prior_river_db_files')
-                        sword_version = str(b_unique[0]).split('>')[1].split(',')[0].split('_')[-1].split('.')[0][2:]
-                        pass_number = str(os.path.basename(shpfile)).split('_')[6]
-                        if sword_version == '15':
-                            correct_pass = False
-                            if pass_list_data:
-                                print('passlist provided')
-                                print(pass_number, pass_list_data)
-                                if str(pass_number) in pass_list_data:
-                                    correct_pass = True
-                                if int(pass_number) in pass_list_data:
-                                    correct_pass = True
-                                else:
-                                    print('no match')
-                            else:
+
+
+        # if reach_map and reach_list:
+        #     pass_number = str(os.path.basename(shpfile)).split('_')[6]
+        #     reach_map_selection = reach_map_data[reach_map_data['reach_id'].isin(int_reach_list)]
+        #     print('reach_map_selection', reach_map_selection)
+        #     reach_map_selection = reach_map_selection[reach_map_selection['pass'] == int(pass_number)]
+        #     print('map selection', reach_map_selection)
+        #     if len(reach_map_selection) > 1:
+        #         all_reaches_in_shp = list(set([str(i) for i in reach_map_selection['reach_id']]))
+        #         shp_files.append(shpfile)
+
+        #         # doing it in this order so that the nodes do not get processed more than once
+        #         if 'Node' in shpfile:
+        #             for reach_id in all_reaches_in_shp:
+        #                 if reach_id not in reach_ids:
+        #                     print('Finding nodes for reach', reach_id)
+        #                     node_list = get_reach_nodes(sword_data, reach_id)
+        #                     node_ids.extend(node_list)
+        #                     print('Found', len(node_list), 'nodes...')
+        #         reach_ids.extend(all_reaches_in_shp)
+
+
+
+        retry_num = 3
+        while retry_num != 0:
+            try:
+        
+                with fsspec.open(f"{shpfile}", mode="rb") as shpfh:
+                                    # Locate and open DBF file
+                    dbf_file = f"{shpfile.split('/')[-1].split('.')[0]}.dbf"
+                                # check to see if we should process, we only process things from sword 15
+                    xml_fp = dbf_file.replace('.dbf', '.shp.xml') 
+
+
+                    zip_file = zipfile.ZipFile(shpfh, 'r')
+                    with zip_file.open(xml_fp, 'r') as f:
+                        data = f.read()
+                    bs_data = BeautifulSoup(data, "xml")
+                    b_unique = bs_data.find_all('xref_prior_river_db_files')
+                    sword_version = str(b_unique[0]).split('>')[1].split(',')[0].split('_')[-1].split('.')[0][2:]
+                    pass_number = str(os.path.basename(shpfile)).split('_')[6]
+                    if sword_version == '15':
+                        correct_pass = False
+                        if pass_list_data:
+                            print('passlist provided')
+                            print(pass_number, pass_list_data)
+                            if str(pass_number) in pass_list_data:
                                 correct_pass = True
-                            print('cp', correct_pass)
-                            if correct_pass:
-                                with zip_file.open(dbf_file) as dbf:
-                                    sf = shapefile.Reader(dbf=dbf)
-                                    records = sf.records()
-                                    if "Reach" in shpfile:
-                                        shp_reaches = {rec["reach_id"] for rec in records}
-                                        if reach_list:
-                                            reach_intersection = [ value for value in shp_reaches if value in reach_list ]
-                                            if len(reach_intersection) > 0:
-                                                shp_files.append(shpfile)
-                                                reach_ids.extend(reach_intersection)
-                                        else:
+                            if int(pass_number) in pass_list_data:
+                                correct_pass = True
+                            else:
+                                print('no match')
+                        else:
+                            correct_pass = True
+                        print('cp', correct_pass)
+                        if correct_pass:
+                            with zip_file.open(dbf_file) as dbf:
+                                sf = shapefile.Reader(dbf=dbf)
+                                records = sf.records()
+                                if "Reach" in shpfile:
+                                    shp_reaches = {rec["reach_id"] for rec in records}
+                                    if reach_list:
+                                        reach_intersection = [ value for value in shp_reaches if value in reach_list ]
+                                        print(reach_intersection, 'reach_intersection')
+                                        if len(reach_intersection) > 0:
                                             shp_files.append(shpfile)
-                                            reach_ids.extend(shp_reaches)
-                                            # reach_ids.extend(reach_intersection)
+                                            reach_ids.extend(reach_intersection)
+                                            delete_shp(shpfile)
+                                            print('appending', len(reach_intersection), 'reaches')
+                                    else:
+                                        shp_files.append(shpfile)
+                                        reach_ids.extend(shp_reaches)
+                                        delete_shp(shpfile)
+                                        print('appending', len(shp_reaches), 'reaches')
+                                        # reach_ids.extend(reach_intersection)
 
-                                        
-                                    if "Node" in shpfile:
-                                        if cnt == 0:
-                                            print('recognized node shp')
-                                            print(shpfile)
-                                            cnt = 999
+                                    
+                                if "Node" in shpfile:
+                                    if cnt == 0:
+                                        print('recognized node shp')
+                                        print(shpfile)
+                                        cnt = 999
+                                    node_id = {rec["node_id"] for rec in records}
+                                    if reach_list:
+                                        for reach_id in reach_list:
+                                            reach_r = re.compile(f"^{reach_id[:10]}.*")
+                                            node_ids.extend(list(filter(reach_r.match, node_id)))
+                                            shp_files.append(shpfile)
+                                        print('Appending', len(node_ids), 'nodes')
+                                        delete_shp(shpfile)
+                                    else:
                                         node_id = {rec["node_id"] for rec in records}
-                                        if reach_list:
-                                            for reach_id in reach_list:
-                                                reach_r = re.compile(f"^{reach_id[:10]}.*")
-                                                node_ids.extend(list(filter(reach_r.match, node_id)))
-                                                shp_files.append(shpfile)
-                                        else:
-                                            node_id = {rec["node_id"] for rec in records}
-                                            node_ids.extend(list(node_id)) 
-                                            shp_files.append(shpfile)
+                                        node_ids.extend(list(node_id)) 
+                                        shp_files.append(shpfile)
+                                        delete_shp(shpfile)
+                                        print('appending', len(node_ids), 'nodes')
 
-                    retry_num = 0
-                except Exception as e:
-                    print('error', e)
-                    print('trying again, try', retry_num)
-                    # s3_list = S3List()
-                    # s3_uris, s3_creds = s3_list.login_and_run_query(args.shortname, args.provider, args.temporalrange, s3_endpoint, args.ssmkey)
-                    retry_num -= 1
+                retry_num = 0
+            except Exception as e:
+                print('error', e)
+                print('trying again, try', retry_num)
+                # s3_list = S3List()
+                # s3_uris, s3_creds = s3_list.login_and_run_query(args.shortname, args.provider, args.temporalrange, s3_endpoint, args.ssmkey)
+                retry_num -= 1
+        
 
 
     sword_data.close()
@@ -456,7 +495,7 @@ def write_json(json_object, filename):
     with open(filename, 'w') as jf:
         json.dump(json_object, jf, indent=2)
 
-def run_aws(args, cont, subset, sword_path, reach_list = False, pass_list_data = False, reach_map=False):
+def run_aws(args, cont, subset, sword_path,input_dir, reach_list = False, pass_list_data = False, hpc=False):
     """Executes operations to retrieve reach identifiers from shapefiles hosted
     in AWS S3 bucket."""
 
@@ -495,8 +534,8 @@ def run_aws(args, cont, subset, sword_path, reach_list = False, pass_list_data =
         print("Error encountered. Exiting program.")
         exit(1)
 
-    s3_uris, reach_ids, node_ids = extract_s3_uris(s3_uris= s3_uris, args = args, sword_path = sword_path,s3_endpoint = s3_endpoint, reach_list=reach_list, pass_list_data=pass_list_data, reach_map=reach_map)
-    
+    s3_uris, reach_ids, node_ids = extract_s3_uris(s3_uris= s3_uris, args = args, sword_path = sword_path,s3_endpoint = s3_endpoint, reach_list=reach_list, pass_list_data=pass_list_data,input_dir = input_dir, hpc=hpc)
+
 
     # Write shapefile json
     json_file = Path(args.directory).joinpath(update_json_filename(conf["s3_list"], cont))
@@ -558,7 +597,7 @@ def run_river(args):
     if args.local:
         shp_files, reach_ids, node_ids = run_local(args, cont, subset, reach_list)
     else:
-        shp_files, reach_ids, node_ids = run_aws(args=args, cont=cont, subset=subset, reach_list=reach_list, pass_list_data=pass_list_data, reach_map = args.reach_map, sword_path = sword_path)
+        shp_files, reach_ids, node_ids = run_aws(args=args, cont=cont, subset=subset, reach_list=reach_list, pass_list_data=pass_list_data, hpc = args.hpc, sword_path = sword_path, input_dir= INPUT_DIR)
     
     # Create cycle pass data
     print('post filter shp', shp_files[:10])

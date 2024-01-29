@@ -98,10 +98,10 @@ def create_args():
                             "--hls",
                             help="indicate the generation of hls target files for ssc prediction",
                             action="store_true")
-    arg_parser.add_argument("-r",
-                            "--reach_map",
-                            help="Path to the reach pass map",
-                            default = False)
+    arg_parser.add_argument("-hpc",
+                            "--hpc",
+                            help="Indicates running on an HPC",
+                            action="store_true")
     return arg_parser
 
 def main():
