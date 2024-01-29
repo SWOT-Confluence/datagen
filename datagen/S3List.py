@@ -145,7 +145,7 @@ class S3List:
         except botocore.exceptions.ClientError as error:
             raise error
 
-    def run_query(self, shortname, provider, temporal_range, continent):
+    def run_query(self, shortname, provider, temporal_range):
         """Run query on collection referenced by shortname from provider."""
 
         url = f"https://{self.CMR}/search/granules.umm_json"
@@ -161,7 +161,6 @@ class S3List:
         res = requests.get(url=url, params=params)      
         coll = res.json()
         all_urls = [url["URL"] for res in coll["items"] for url in res["umm"]["RelatedUrls"] if url["Type"] == "GET DATA VIA DIRECT ACCESS"]
-        # print(all_urls)
         all_urls = [url for url in all_urls if url[-3:] == 'zip']
         return all_urls
     
@@ -189,8 +188,6 @@ class S3List:
         parsed = list(set(parsed))
         return parsed
 
-
-
     def login_and_run_query(self, short_name, provider, temporal_range, s3_endpoint, key):
         """Log into CMR and run query to retrieve a list of S3 URLs."""
 
@@ -206,13 +203,9 @@ class S3List:
             # Run query
             s3_urls = self.run_query(short_name, provider, temporal_range)
 
-            # Clean up and delete token
-            self.delete_token()
-
             # parse s3_urls 
             s3_urls = self.parse_duplicate_files(s3_urls = s3_urls)
-
-                        
+            
         except Exception as error:
             raise error
         else:

@@ -326,7 +326,7 @@ def extract_s3_uris(s3_uris, s3_creds, s3_endpoint,  args, continent,
                 print(e)
                 print('repulling creds and trying again, try', retry_num)
                 s3_list = S3List()
-                s3_uris, s3_creds = s3_list.login_and_run_query(args.shortname, args.provider, args.temporalrange, continent, s3_endpoint, args.ssmkey)
+                s3_uris, s3_creds = s3_list.login_and_run_query(args.shortname, args.provider, args.temporalrange, s3_endpoint, args.ssmkey)
                 retry_num -= 1
 
     # Sort and remove duplicates from reaches, nodes, and shapefiles
@@ -441,7 +441,7 @@ def run_aws(args, cont, subset, reach_list = False, pass_list_data = False):
             s3_uris, s3_creds = s3_list.get_s3_uris_sim()
         else:
             s3_endpoint = conf["s3_cred_endpoints"][args.provider]
-            s3_uris, s3_creds = s3_list.login_and_run_query(args.shortname, args.provider, args.temporalrange, cont, s3_endpoint, args.ssmkey)
+            s3_uris, s3_creds = s3_list.login_and_run_query(args.shortname, args.provider, args.temporalrange, s3_endpoint, args.ssmkey)
             s3_uris.sort(key=sort_shapefiles)
     except Exception as e:
         print(e)
