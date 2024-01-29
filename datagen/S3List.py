@@ -9,6 +9,7 @@ from urllib import request
 import boto3
 import botocore
 import requests
+import fnmatch
 
 class S3List:
     """Class used to query and download from PO.DAAC's CMR API."""
@@ -160,18 +161,37 @@ class S3List:
         res = requests.get(url=url, params=params)      
         coll = res.json()
         all_urls = [url["URL"] for res in coll["items"] for url in res["umm"]["RelatedUrls"] if url["Type"] == "GET DATA VIA DIRECT ACCESS"]
-        s3_urls = list(filter(lambda url: self.continent_filter(url, continent), all_urls))
-        return s3_urls
+        # print(all_urls)
+        all_urls = [url for url in all_urls if url[-3:] == 'zip']
+        return all_urls
     
-    def continent_filter(self, url, continent):
-        """Filter by continent and for zip files."""
-        
-        if continent in url and url[-3:] == 'zip':
-            return True
-        else:
-            return False
-    
-    def login_and_run_query(self, short_name, provider, temporal_range, continent, s3_endpoint, key):
+    def parse_duplicate_files(self, s3_urls:list):
+
+        """
+        In some cases, when shapefiles are processed more than once they leave both processings in the bucket, so we need to filter them.
+
+        """
+        parsed = []
+
+        for i in s3_urls:
+            # print(i[:-6])
+            # mult_process_bool = False
+            all_processings = fnmatch.filter(s3_urls, i[:-6]+'*')
+            if len(all_processings) > 1:
+                all_processings_nums = [int(i[-6:].replace('.zip', '')) for i in all_processings]
+                padded_max = str("{:02d}".format(max(all_processings_nums)))
+                max_path = fnmatch.filter(all_processings, f'*{padded_max}.zip')
+                parsed.append(max_path[0])
+                print('found a double')
+            else:
+                parsed.append(i)
+
+        parsed = list(set(parsed))
+        return parsed
+
+
+
+    def login_and_run_query(self, short_name, provider, temporal_range, s3_endpoint, key):
         """Log into CMR and run query to retrieve a list of S3 URLs."""
 
         try:
@@ -184,7 +204,14 @@ class S3List:
             self.get_token()
 
             # Run query
-            s3_urls = self.run_query(short_name, provider, temporal_range, continent)
+            s3_urls = self.run_query(short_name, provider, temporal_range)
+
+            # Clean up and delete token
+            self.delete_token()
+
+            # parse s3_urls 
+            s3_urls = self.parse_duplicate_files(s3_urls = s3_urls)
+
                         
         except Exception as error:
             raise error

@@ -21,6 +21,7 @@ Command line arguments:
 
 River Example: python3 generate.py -c river -i 3 -p POCLOUD -s SWOT_SIMULATED_NA_CONTINENT_L2_HR_RIVERSP_V1 -t 2022-08-01T00:00:00Z,2022-08-22T23:59:59Z -d /home/useraccount/json_data
 Lake Example: python3 generate.py -c lake -i 3 -p POCLOUD -s SWOT_SIMULATED_NA_CONTINENT_L2_HR_RIVERSP_V1 -t 2022-08-01T00:00:00Z,2022-08-22T23:59:59Z -d /home/useraccount/json_data
+Local Docker Example: sudo docker run -v /mnt/external/data/reprocessed_data/tars:/data/ datagen -i 0 -c river -p POCLOUD -s SWOT_L2_HR_RiverSP_1.1 -t 2023-01-01T00:00:00Z,2023-10-15T23:59:59Z -d /data -k 1416df6c-7a20-46a1-949d-d26975acfdd0 -l -f /data/ -b
 """
 # Standard imports
 import argparse
@@ -93,6 +94,10 @@ def create_args():
                             "--swordpatch",
                             help="Path to JSON file that patches SWORD topology issues",
                             type=str)
+    arg_parser.add_argument("-b",
+                            "--hls",
+                            help="indicate the generation of hls target files for ssc prediction",
+                            action="store_true")
     return arg_parser
 
 def main():

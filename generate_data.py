@@ -28,7 +28,8 @@ from datagen.CyclePass import CyclePass
 from datagen.Reach import Reach
 from datagen.ReachNode import ReachNode
 from datagen.S3List import S3List
-from sets.getAllSets import main
+from sets.getAllSets import main as set_main
+import datagen.Ssc as ssc
 
 def apply_reach_patch(sword_dataset, swordpatch):
     """Apply reach level changes two the new copy of SWORD with the suffix _patch.nc
@@ -174,6 +175,7 @@ def extract_ids(shpfiles, creds, pass_list_data = False):
     return shp_list, reach_ids, node_ids
 
 def extract_ids_local(shapefiledir, cont, outdir):
+    """Extract reach identifiers from shapefile names and return a list.
     """Extract reach identifiers from shapefile names and return a list.
     
     Parameters
@@ -549,36 +551,42 @@ def run_river(args):
             conf['sword_suffix'], sword_filename = patch_sword(args, INPUT_DIR, sword_filename, conf)
             print('Finished patching, new suffix and filename:', conf['sword_suffix'], sword_filename)
 
-        
-        # Create basin data
-        print("Retrieving basin data.")
-        basin = Basin(reach_ids, sword_filename, sos_filename)
-        basin_data = basin.extract_data()
-        json_file = Path(args.directory).joinpath(update_json_filename(conf["basin"], cont))
-        print(f"Writing basin data to: {json_file}")
-        write_json(basin_data, json_file)
-        
-        # Create reach data
-        print("Retrieving reach data.")
-        reach = Reach(reach_ids, sword_filename, sos_filename)
-        reach_data = reach.extract_data()
-        json_file = Path(args.directory).joinpath(update_json_filename(conf["reach"], cont))
-        print(f"Writing reach data to: {json_file}")
-        write_json(reach_data, json_file)
-        
-        # Create reach node data
-        print("Retrieving reach node data.")
-        reach_node = ReachNode(reach_ids, node_ids)
-        reach_node_data = reach_node.extract_data()
-        json_file = Path(args.directory).joinpath(update_json_filename(conf["reach_node"], cont))
-        print(f"Writing reach node data to: {json_file}")
-        write_json(reach_node_data, json_file)   
-        
-        # Create sets 
-        print("Retrieving set data.")
-        main(args, cont)
-    else:
-        print(f"No reach or node data to retrieve for this continent: {cont}.")
+    
+    # Create basin data
+    print("Retrieving basin data.")
+    basin = Basin(reach_ids, sword_filename, sos_filename)
+    basin_data = basin.extract_data()
+    json_file = Path(args.directory).joinpath(update_json_filename(conf["basin"], cont))
+    print(f"Writing basin data to: {json_file}")
+    write_json(basin_data, json_file)
+    
+    # Create reach data
+    print("Retrieving reach data.")
+    reach = Reach(reach_ids, sword_filename, sos_filename)
+    reach_data = reach.extract_data()
+    json_file = Path(args.directory).joinpath(update_json_filename(conf["reach"], cont))
+    print(f"Writing reach data to: {json_file}")
+    write_json(reach_data, json_file)
+    
+    # Create reach node data
+    print("Retrieving reach node data.")
+    reach_node = ReachNode(reach_ids, node_ids)
+    reach_node_data = reach_node.extract_data()
+    json_file = Path(args.directory).joinpath(update_json_filename(conf["reach_node"], cont))
+    print(f"Writing reach node data to: {json_file}")
+    write_json(reach_node_data, json_file)   
+    
+    # Create sets 
+    print("Retrieving set data.")
+    set_main(args, cont)
+
+    # Create ssc mapping
+    if args.hls:
+        print("Retrieving HLS tiles.")
+        swordfilepath = os.path.join(INPUT_DIR,'sword', sword_filename)
+        json_file = Path(args.directory).joinpath(update_json_filename(conf["hls_links"], cont))
+        hls_link_data = ssc.ssc_process_continent(reach_ids, cont, swordfilepath)
+        write_json(hls_link_data, json_file)
 
 if __name__ == "__main__":
     import datetime
