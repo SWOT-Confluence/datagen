@@ -227,8 +227,8 @@ def extract_ids_local(shapefiledir, cont, outdir):
     write_json(shp_json, json_file)
     return shp_files, reach_ids, node_ids, rids_shp
 
-def extract_s3_uris(s3_uris, s3_creds, s3_endpoint,  args, continent,
-                    reach_list=False, pass_list_data=False):
+def extract_s3_uris(s3_uris, s3_creds, s3_endpoint, args, reach_list=False, 
+                    pass_list_data=False):
     """Extract S3 URIs from reach file subset.
     
     Open shapefiles and locate reach and node identifiers.
@@ -238,10 +238,12 @@ def extract_s3_uris(s3_uris, s3_creds, s3_endpoint,  args, continent,
     node_ids = []
     shp_files = []
     reach_id_s3 = {}
-    print('just before filtering')
-    print(s3_uris)
+    # print('just before filtering')
+    # print(s3_uris)
     cnt = 0
     for shpfile in s3_uris:
+        
+        print("Accessing: ", shpfile)
 
         # Try to access S3 shapefiles with credentials 3 times
         retry_num = 3
@@ -278,7 +280,7 @@ def extract_s3_uris(s3_uris, s3_creds, s3_endpoint,  args, continent,
                                 print('no match')
                         else:
                             correct_pass = True
-                        print('cp', correct_pass)
+                        # print('cp', correct_pass)
                         if correct_pass:
                             with zip_file.open(dbf_file) as dbf:
                                 sf = shapefile.Reader(dbf=dbf)
@@ -429,7 +431,7 @@ def write_json(json_object, filename):
     with open(filename, 'w') as jf:
         json.dump(json_object, jf, indent=2)
 
-def run_aws(args, cont, subset, reach_list = False, pass_list_data = False):
+def run_aws(args, cont, reach_list=False, pass_list_data=False):
     """Executes operations to retrieve reach identifiers from shapefiles hosted
     in AWS S3 bucket."""
 
@@ -450,14 +452,13 @@ def run_aws(args, cont, subset, reach_list = False, pass_list_data = False):
         exit(1)
 
     if s3_uris:
-        s3_uris, reach_ids, node_ids, rid_s3 = extract_s3_uris(s3_uris= s3_uris, s3_creds=s3_creds, 
-                                                            args=args, continent=cont,
-                                                            s3_endpoint=s3_endpoint, 
-                                                            reach_list=reach_list, 
-                                                            pass_list_data=pass_list_data)
-        
-        if reach_ids:
-    
+        s3_uris, reach_ids, node_ids, rid_s3 = extract_s3_uris(s3_uris=s3_uris, 
+                                                               s3_creds=s3_creds, 
+                                                               s3_endpoint=s3_endpoint,
+                                                               args=args,
+                                                               reach_list=reach_list, 
+                                                               pass_list_data=pass_list_data)
+        if reach_ids:    
             # Write shapefile json
             json_file = Path(args.directory).joinpath(update_json_filename(conf["s3_list"], cont))
             write_json(s3_uris, json_file)
@@ -469,10 +470,8 @@ def run_aws(args, cont, subset, reach_list = False, pass_list_data = False):
             # Creat a list of only shapfile names
             shp_files = [shp.split('/')[-1].split('.')[0] for shp in s3_uris]
             return shp_files, reach_ids, node_ids
-        
         else:
             return [], [], []
-
     else:
         return [], [] ,[]
 
@@ -503,7 +502,7 @@ def run_local(args, cont, subset, reach_list=None):
 def run_river(args):
     """Execute the operations needed to generate JSON data."""
 
-    INPUT_DIR = Path("/data")
+    INPUT_DIR = Path(args.directory)
     
     # Determine continent to run on
     cont = get_continent(args.index, Path(args.directory).joinpath(args.jsonfile))
@@ -526,11 +525,11 @@ def run_river(args):
     if args.local:
         shp_files, reach_ids, node_ids = run_local(args, cont, subset, reach_list)
     else:
-        shp_files, reach_ids, node_ids = run_aws(args, cont, subset, reach_list, pass_list_data=pass_list_data)
+        shp_files, reach_ids, node_ids = run_aws(args, cont, reach_list, pass_list_data=pass_list_data)
     
     if shp_files:
         # Create cycle pass data
-        print('post filter shp', shp_files[:10])
+        # print('post filter shp', shp_files[:10])
         cycle_pass = CyclePass(shp_files)
         cycle_pass_data, pass_num = cycle_pass.get_cycle_pass_data()
         json_file = Path(args.directory).joinpath(update_json_filename(conf["cycle_passes"], cont))
@@ -550,42 +549,44 @@ def run_river(args):
             conf['sword_suffix'], sword_filename = patch_sword(args, INPUT_DIR, sword_filename, conf)
             print('Finished patching, new suffix and filename:', conf['sword_suffix'], sword_filename)
 
-    
-    # Create basin data
-    print("Retrieving basin data.")
-    basin = Basin(reach_ids, sword_filename, sos_filename)
-    basin_data = basin.extract_data()
-    json_file = Path(args.directory).joinpath(update_json_filename(conf["basin"], cont))
-    print(f"Writing basin data to: {json_file}")
-    write_json(basin_data, json_file)
-    
-    # Create reach data
-    print("Retrieving reach data.")
-    reach = Reach(reach_ids, sword_filename, sos_filename)
-    reach_data = reach.extract_data()
-    json_file = Path(args.directory).joinpath(update_json_filename(conf["reach"], cont))
-    print(f"Writing reach data to: {json_file}")
-    write_json(reach_data, json_file)
-    
-    # Create reach node data
-    print("Retrieving reach node data.")
-    reach_node = ReachNode(reach_ids, node_ids)
-    reach_node_data = reach_node.extract_data()
-    json_file = Path(args.directory).joinpath(update_json_filename(conf["reach_node"], cont))
-    print(f"Writing reach node data to: {json_file}")
-    write_json(reach_node_data, json_file)   
-    
-    # Create sets 
-    print("Retrieving set data.")
-    set_main(args, cont)
+        # Create basin data
+        print("Retrieving basin data.")
+        basin = Basin(reach_ids, sword_filename, sos_filename)
+        basin_data = basin.extract_data()
+        json_file = Path(args.directory).joinpath(update_json_filename(conf["basin"], cont))
+        print(f"Writing basin data to: {json_file}")
+        write_json(basin_data, json_file)
+        
+        # Create reach data
+        print("Retrieving reach data.")
+        reach = Reach(reach_ids, sword_filename, sos_filename)
+        reach_data = reach.extract_data()
+        json_file = Path(args.directory).joinpath(update_json_filename(conf["reach"], cont))
+        print(f"Writing reach data to: {json_file}")
+        write_json(reach_data, json_file)
+        
+        # Create reach node data
+        print("Retrieving reach node data.")
+        reach_node = ReachNode(reach_ids, node_ids)
+        reach_node_data = reach_node.extract_data()
+        json_file = Path(args.directory).joinpath(update_json_filename(conf["reach_node"], cont))
+        print(f"Writing reach node data to: {json_file}")
+        write_json(reach_node_data, json_file)   
+        
+        # Create sets 
+        print("Retrieving set data.")
+        set_main(args, cont, INPUT_DIR, INPUT_DIR)
 
-    # Create ssc mapping
-    if args.hls:
-        print("Retrieving HLS tiles.")
-        swordfilepath = os.path.join(INPUT_DIR,'sword', sword_filename)
-        json_file = Path(args.directory).joinpath(update_json_filename(conf["hls_links"], cont))
-        hls_link_data = ssc.ssc_process_continent(reach_ids, cont, swordfilepath)
-        write_json(hls_link_data, json_file)
+        # Create ssc mapping
+        if args.hls:
+            print("Retrieving HLS tiles.")
+            swordfilepath = os.path.join(INPUT_DIR,'sword', sword_filename)
+            json_file = Path(args.directory).joinpath(update_json_filename(conf["hls_links"], cont))
+            hls_link_data = ssc.ssc_process_continent(reach_ids, cont, swordfilepath)
+            write_json(hls_link_data, json_file)
+    
+    else:
+        print("No shapefiles were located and therefore no JSON files will be written.")
 
 if __name__ == "__main__":
     import datetime

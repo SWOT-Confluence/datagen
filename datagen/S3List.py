@@ -2,7 +2,6 @@
 import base64
 from http.cookiejar import CookieJar
 import json
-from socket import gethostname, gethostbyname
 from urllib import request
 
 # Third-party imports
@@ -97,7 +96,6 @@ class S3List:
             except:
                 retry_cnt -= 1
 
-
         return s3_creds
 
     def login(self):
@@ -181,7 +179,7 @@ class S3List:
                 padded_max = str("{:02d}".format(max(all_processings_nums)))
                 max_path = fnmatch.filter(all_processings, f'*{padded_max}.zip')
                 parsed.append(max_path[0])
-                print('found a double')
+                # print('found a double')
             else:
                 parsed.append(i)
 
@@ -195,9 +193,6 @@ class S3List:
             # Login and retrieve token
             username, password = self.login()
             s3_creds = self.get_s3_creds(s3_endpoint, username, password, key)
-            client_id = "podaac_cmr_client"
-            hostname = gethostname()
-            ip_addr = gethostbyname(hostname)
             self.get_token()
 
             # Run query
@@ -205,7 +200,7 @@ class S3List:
 
             # parse s3_urls 
             s3_urls = self.parse_duplicate_files(s3_urls = s3_urls)
-            
+
         except Exception as error:
             raise error
         else:
