@@ -186,7 +186,7 @@ class S3List:
         parsed = list(set(parsed))
         return parsed
 
-    def login_and_run_query(self, short_name, provider, temporal_range, s3_endpoint, key):
+    def login_and_run_query(self, short_name, provider, temporal_range, continent, s3_endpoint, key):
         """Log into CMR and run query to retrieve a list of S3 URLs."""
 
         try:
@@ -200,6 +200,9 @@ class S3List:
 
             # parse s3_urls 
             s3_urls = self.parse_duplicate_files(s3_urls = s3_urls)
+            
+            # Filter by continent
+            s3_urls = [s3 for s3 in s3_urls if continent in s3]
 
         except Exception as error:
             raise error
