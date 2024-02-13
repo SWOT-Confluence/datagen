@@ -280,7 +280,6 @@ def extract_s3_uris(s3_uris, s3_creds, s3_endpoint, args, reach_list=False,
                                 print('no match')
                         else:
                             correct_pass = True
-                        # print('cp', correct_pass)
                         if correct_pass:
                             with zip_file.open(dbf_file) as dbf:
                                 sf = shapefile.Reader(dbf=dbf)
@@ -296,18 +295,17 @@ def extract_s3_uris(s3_uris, s3_creds, s3_endpoint, args, reach_list=False,
                                             shp_files.append(shpfile)
                                             reach_ids.extend(reach_intersection)
                                             rids = reach_intersection
+                                            for reach_id in rids:
+                                                track_s3_uris(reach_id_s3, reach_id, shpfile)
                                     else:
                                         shp_files.append(shpfile)
                                         reach_ids.extend(shp_reaches)
-                                        # reach_ids.extend(reach_intersection)
-                                    for reach_id in rids:
-                                        track_s3_uris(reach_id_s3, reach_id, shpfile)
+                                        for reach_id in rids:
+                                            track_s3_uris(reach_id_s3, reach_id, shpfile)
 
                                 # Extract NODE data    
                                 if "Node" in shpfile:
                                     if cnt == 0:
-                                        # print('recognized node shp')
-                                        # print(shpfile)
                                         cnt = 999
                                     node_id = {rec["node_id"] for rec in records}
                                     if reach_list:
@@ -338,8 +336,6 @@ def extract_s3_uris(s3_uris, s3_creds, s3_endpoint, args, reach_list=False,
     node_ids.sort()
     shp_files = list(set(shp_files))
     shp_files.sort(key=sort_shapefiles)
-    print('returning these shapefiles')
-    print(shp_files)
     rid_s3 = {reach_id: sorted(reach_id_s3[reach_id]) for reach_id in sorted(reach_id_s3)}
     return shp_files, reach_ids, node_ids, rid_s3
 
