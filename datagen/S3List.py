@@ -2,7 +2,6 @@
 import base64
 from http.cookiejar import CookieJar
 import json
-from socket import gethostname, gethostbyname
 from urllib import request
 
 # Third-party imports
@@ -97,7 +96,6 @@ class S3List:
             except:
                 retry_cnt -= 1
 
-
         return s3_creds
 
     def login(self):
@@ -128,7 +126,7 @@ class S3List:
         
         return username, password
 
-    def get_token(self, client_id, ip_address, username, password):
+    def get_token(self):
         """Get CMR authentication token for searching records.
         
         Parameters
@@ -138,37 +136,12 @@ class S3List:
         ip_address: str
             client's IP address
         """
-        url = f"https://{self.CMR}/search/granules.umm_json"
+        
         try:
             ssm_client = boto3.client('ssm', region_name="us-west-2")
             self._token = ssm_client.get_parameter(Name="bearer--edl--token", WithDecryption=True)["Parameter"]["Value"]
         except botocore.exceptions.ClientError as error:
             raise error
-
-
-        # Post a token request and return resonse
-        # token_url = f"https://{self.CMR}/legacy-services/rest/tokens"
-        # token_xml = (f"<token>"
-        #                 f"<username>{username}</username>"
-        #                 f"<password>{password}</password>"
-        #                 f"<client_id>{client_id}</client_id>"
-        #                 f"<user_ip_address>{ip_address}</user_ip_address>"
-        #             f"</token>")
-        # headers = {"Content-Type" : "application/xml", "Accept" : "application/json"}
-        # print(requests.post(url=token_url, data=token_xml, headers=headers))
-        # self._token = requests.post(url=token_url, data=token_xml, headers=headers) \
-        #     .json()["token"]["id"]
-
-    def delete_token(self):
-        """Delete CMR authentication token."""
-
-        token_url = f"https://{self.CMR}/legacy-services/rest/tokens"
-        headers = {"Content-Type" : "application/xml", "Accept" : "application/json"}
-        try:
-            res = requests.request("DELETE", f"{token_url}/{self._token}", headers=headers)
-            return res.status_code
-        except Exception as e:
-            raise Exception(f"Failed to delete token: {e}.")
 
     def run_query(self, shortname, provider, temporal_range):
         """Run query on collection referenced by shortname from provider."""
@@ -183,14 +156,9 @@ class S3List:
                     "sort_key" : "start_date",
                     "temporal" : temporal_range
                 }
-        res = requests.get(url=url, params=params)
-        # print(res)        
+        res = requests.get(url=url, params=params)      
         coll = res.json()
-        # print('coll')
-        # print(coll)
-        # print('all')
         all_urls = [url["URL"] for res in coll["items"] for url in res["umm"]["RelatedUrls"] if url["Type"] == "GET DATA VIA DIRECT ACCESS"]
-        # print(all_urls)
         all_urls = [url for url in all_urls if url[-3:] == 'zip']
         return all_urls
     
@@ -211,37 +179,31 @@ class S3List:
                 padded_max = str("{:02d}".format(max(all_processings_nums)))
                 max_path = fnmatch.filter(all_processings, f'*{padded_max}.zip')
                 parsed.append(max_path[0])
-                print('found a double')
+                # print('found a double')
             else:
                 parsed.append(i)
 
         parsed = list(set(parsed))
         return parsed
 
-
-
-    def login_and_run_query(self, short_name, provider, temporal_range, s3_endpoint, key):
+    def login_and_run_query(self, short_name, provider, temporal_range, continent, s3_endpoint, key):
         """Log into CMR and run query to retrieve a list of S3 URLs."""
 
         try:
             # Login and retrieve token
             username, password = self.login()
             s3_creds = self.get_s3_creds(s3_endpoint, username, password, key)
-            client_id = "podaac_cmr_client"
-            hostname = gethostname()
-            ip_addr = gethostbyname(hostname)
-            self.get_token(client_id, ip_addr, username, password)
+            self.get_token()
 
             # Run query
             s3_urls = self.run_query(short_name, provider, temporal_range)
 
-            # Clean up and delete token
-            self.delete_token()
-
             # parse s3_urls 
             s3_urls = self.parse_duplicate_files(s3_urls = s3_urls)
+            
+            # Filter by continent
+            s3_urls = [s3 for s3 in s3_urls if continent in s3]
 
-                        
         except Exception as error:
             raise error
         else:
@@ -260,13 +222,7 @@ class S3List:
             creds["sessionToken"] = ssm_client.get_parameter(Name="s3_creds_token", WithDecryption=True)["Parameter"]["Value"]
         except botocore.exceptions.ClientError as e:
             raise e
-        
-        # s3 = boto3.client("s3",
-        #                   aws_access_key_id=creds["accessKeyId"],
-        #                   aws_secret_access_key=creds["secretAccessKey"],
-        #                   aws_session_token=creds["sessionToken"])
-
-
+    
         session = boto3.Session(
             aws_access_key_id=creds["accessKeyId"],
             aws_secret_access_key=creds["secretAccessKey"],
