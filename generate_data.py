@@ -369,12 +369,15 @@ def extract_s3_uris(s3_uris, s3_endpoint,  args, sword_path,input_dir, reach_lis
                                         if len(reach_intersection) > 0:
                                             shp_files.append(shpfile)
                                             reach_ids.extend(reach_intersection)
-                                            delete_shp(shpfile)
+                                            # delete_shp(shpfile)
                                             print('appending', len(reach_intersection), 'reaches')
+                                        else:
+                                            # shapefile does not contain the reach, delete it
+                                            delete_shp(shpfile)
                                     else:
                                         shp_files.append(shpfile)
                                         reach_ids.extend(shp_reaches)
-                                        delete_shp(shpfile)
+                                        # delete_shp(shpfile)
                                         print('appending', len(shp_reaches), 'reaches')
                                         # reach_ids.extend(reach_intersection)
 
@@ -391,13 +394,20 @@ def extract_s3_uris(s3_uris, s3_endpoint,  args, sword_path,input_dir, reach_lis
                                             node_ids.extend(list(filter(reach_r.match, node_id)))
                                             shp_files.append(shpfile)
                                         print('Appending', len(node_ids), 'nodes')
-                                        delete_shp(shpfile)
+                                        # delete_shp(shpfile)
                                     else:
                                         node_id = {rec["node_id"] for rec in records}
                                         node_ids.extend(list(node_id)) 
                                         shp_files.append(shpfile)
-                                        delete_shp(shpfile)
+                                        # delete_shp(shpfile)
                                         print('appending', len(node_ids), 'nodes')
+                        else:
+                            # Shapefile does not contain reach, delete it
+                            delete_shp(shpfile)
+                    else:
+                        # shapefile is not specified sword version
+                        delete_shp(shpfile)
+                    
 
                 retry_num = 0
             except Exception as e:
