@@ -311,9 +311,11 @@ def extract_s3_uris(s3_uris, s3_creds, s3_endpoint, args, reach_list=False,
                                     if reach_list:
                                         for reach_id in reach_list:
                                             reach_r = re.compile(f"^{reach_id[:10]}.*")
-                                            node_ids.extend(list(filter(reach_r.match, node_id)))
-                                            shp_files.append(shpfile)
-                                            track_s3_uris(reach_id_s3, reach_id, shpfile)
+                                            node_m = list(filter(reach_r.match, node_id))
+                                            if node_m:
+                                                node_ids.extend(node_m)
+                                                shp_files.append(shpfile)
+                                                track_s3_uris(reach_id_s3, reach_id, shpfile)
                                     else:
                                         node_id = {rec["node_id"] for rec in records}
                                         node_ids.extend(list(node_id)) 
