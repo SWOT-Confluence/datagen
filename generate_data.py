@@ -227,7 +227,7 @@ def extract_ids_local(shapefiledir, cont, outdir):
     write_json(shp_json, json_file)
     return shp_files, reach_ids, node_ids, rids_shp
 
-def extract_s3_uris(s3_uris, s3_creds, s3_endpoint, args, reach_list=False, 
+def extract_s3_uris(s3_uris, s3_creds, s3_endpoint, args, cont, reach_list=False, 
                     pass_list_data=False):
     """Extract S3 URIs from reach file subset.
     
@@ -328,7 +328,7 @@ def extract_s3_uris(s3_uris, s3_creds, s3_endpoint, args, reach_list=False,
                 print(e)
                 print('repulling creds and trying again, try', retry_num)
                 s3_list = S3List()
-                s3_uris, s3_creds = s3_list.login_and_run_query(args.shortname, args.provider, args.temporalrange, s3_endpoint, args.ssmkey)
+                s3_uris, s3_creds = s3_list.login_and_run_query(args.shortname, args.provider, args.temporalrange, cont, s3_endpoint, args.ssmkey)
                 retry_num -= 1
 
     # Sort and remove duplicates from reaches, nodes, and shapefiles
@@ -455,7 +455,8 @@ def run_aws(args, cont, reach_list=False, pass_list_data=False):
                                                                s3_endpoint=s3_endpoint,
                                                                args=args,
                                                                reach_list=reach_list, 
-                                                               pass_list_data=pass_list_data)
+                                                               pass_list_data=pass_list_data,
+                                                               cont = cont)
         if reach_ids:    
             # Write shapefile json
             json_file = Path(args.directory).joinpath(update_json_filename(conf["s3_list"], cont))
