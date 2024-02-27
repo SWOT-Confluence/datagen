@@ -147,6 +147,15 @@ class S3List:
         """Run query on collection referenced by shortname from provider."""
 
         url = f"https://{self.CMR}/search/granules.umm_json"
+        # params = {
+        #             "provider" : provider, 
+        #             "ShortName" : shortname, 
+        #             "token" : self._token,
+        #             "scroll" : "true",
+        #             "page_size" : 2000,
+        #             "sort_key" : "start_date",
+        #             "temporal" : temporal_range
+        #         }
         params = {
                     "provider" : provider, 
                     "ShortName" : shortname, 
@@ -191,12 +200,18 @@ class S3List:
 
         try:
             # Login and retrieve token
-            username, password = self.login()
-            s3_creds = self.get_s3_creds(s3_endpoint, username, password, key)
-            self.get_token()
+            # username, password = self.login()
+            # s3_creds = self.get_s3_creds(s3_endpoint, username, password, key)
+            client_id = "podaac_cmr_client"
+            # hostname = gethostname()
+            # ip_addr = gethostbyname(hostname)
+            # self.get_token(client_id, ip_addr, username, password)
 
             # Run query
             s3_urls = self.run_query(short_name, provider, temporal_range)
+
+            # Clean up and delete token
+            # self.delete_token()
 
             # parse s3_urls 
             s3_urls = self.parse_duplicate_files(s3_urls = s3_urls)
@@ -208,7 +223,7 @@ class S3List:
             raise error
         else:
             # Return list and s3 endpoint credentials
-            return s3_urls, s3_creds
+            return s3_urls
         
     def get_s3_uris_sim(self):
         """Get a list of S3 URIs for S3-hosted simulated data."""

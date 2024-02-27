@@ -11,6 +11,7 @@ from pathlib import Path
 import re
 import traceback
 import zipfile
+import subprocess as sp
 
 # Third-party imports
 import fsspec
@@ -20,6 +21,7 @@ import numpy as np
 import fnmatch
 import netCDF4
 import shutil
+import pandas as pd
 
 # Local imports
 from conf import conf
@@ -30,6 +32,25 @@ from datagen.ReachNode import ReachNode
 from datagen.S3List import S3List
 from sets.getAllSets import main as set_main
 import datagen.Ssc as ssc
+
+
+def get_reach_nodes(rootgrp, reach_id):
+
+    all_nodes = []
+
+    node_ids_indexes = np.where(rootgrp.groups['nodes'].variables['reach_id'][:].data.astype('U') == str(reach_id))
+
+    if len(node_ids_indexes[0])!=0:
+        for y in node_ids_indexes[0]:
+            node_id = str(rootgrp.groups['nodes'].variables['node_id'][y].data.astype('U'))
+            all_nodes.append(node_id)
+
+
+
+            # all_nodes.extend(node_ids[0].tolist())
+
+    # print(f'Found {len(set(all_nodes))} nodes...')
+    return list(set(all_nodes))
 
 def apply_reach_patch(sword_dataset, swordpatch):
     """Apply reach level changes two the new copy of SWORD with the suffix _patch.nc
@@ -103,7 +124,7 @@ def patch_sword(args, INPUT_DIR, sword_filename, conf):
 
     return new_suffix, new_sword_filename
 
-def extract_ids(shpfiles, creds, pass_list_data = False):
+def extract_ids(shpfiles,pass_list_data = False):
     """Extract reach identifiers from shapefile names and return a list.
     
     Parameters
@@ -119,9 +140,7 @@ def extract_ids(shpfiles, creds, pass_list_data = False):
 
     for shpfile in shpfiles:
         # Open S3 zip file
-        with fsspec.open(f"{shpfile}", mode="rb", anon=False, 
-            key=creds["accessKeyId"], secret=creds["secretAccessKey"], 
-            token=creds["sessionToken"]) as shpfh:
+        with fsspec.open(f"{shpfile}") as shpfh:
 
 
 
@@ -227,21 +246,88 @@ def extract_ids_local(shapefiledir, cont, outdir):
     write_json(shp_json, json_file)
     return shp_files, reach_ids, node_ids, rids_shp
 
+def download_shps(shapefile_list:list, shpfile_dir:str):
+
+        # https://archive.swot.podaac.earthdata.nasa.gov/podaac-swot-ops-cumulus-protected/SWOT_L2_HR_RiverSP_1.1/SWOT_L2_HR_RiverSP_Reach_502_027_SI_20230426T162930_20230426T162932_PIB0_01.zip
+        podaac_address = 'https://archive.swot.podaac.earthdata.nasa.gov/'
+        http_shapefile_list = [i.replace('s3://', podaac_address) for i in shapefile_list]
+        # new_fullpath = 
+        [sp.run(['wget', shapefile, '-P', shpfile_dir]) for shapefile in http_shapefile_list if not os.path.exists(os.path.join(shpfile_dir, os.path.basename(shapefile)))]
+        return [os.path.join(shpfile_dir, os.path.basename(shapefile)) for shapefile in http_shapefile_list][0]
+def delete_shp(shapefile):
+    sp.run(['rm', shapefile])
+
+
 def extract_s3_uris(s3_uris, s3_creds, s3_endpoint, args, cont, reach_list=False, 
                     pass_list_data=False):
     """Extract S3 URIs from reach file subset.
     
     Open shapefiles and locate reach and node identifiers.
     """
+
     
     reach_ids = []
     node_ids = []
     shp_files = []
+
+    sword_data = netCDF4.Dataset(sword_path)
     reach_id_s3 = {}
     # print('just before filtering')
     # print(s3_uris)
     cnt = 0
+    # if reach_map:
+    #     print('running with reach map')
+    #     reach_map_data = pd.read_csv(reach_map)
+    # int_reach_list = [int(i) for i in reach_list]
+    # if hpc:
+    #     # if we are on the hpc, download all of the cont tiles
+    #     print('Running on hpc')
+    #     shpfile_dir = os.path.join(input_dir, 'swot', 'shps')
+    #     s3_uris = download_shps(s3_uris, shpfile_dir)
+
+
+
     for shpfile in s3_uris:
+        if hpc:
+
+            print('Running on hpc')
+            shpfile_dir = os.path.join(input_dir, 'swot', 'shps')
+            shpfile = download_shps([shpfile], shpfile_dir)
+            print('processing', shpfile)
+
+
+
+
+
+
+        # if reach_map and reach_list:
+        #     pass_number = str(os.path.basename(shpfile)).split('_')[6]
+        #     reach_map_selection = reach_map_data[reach_map_data['reach_id'].isin(int_reach_list)]
+        #     print('reach_map_selection', reach_map_selection)
+        #     reach_map_selection = reach_map_selection[reach_map_selection['pass'] == int(pass_number)]
+        #     print('map selection', reach_map_selection)
+        #     if len(reach_map_selection) > 1:
+        #         all_reaches_in_shp = list(set([str(i) for i in reach_map_selection['reach_id']]))
+        #         shp_files.append(shpfile)
+
+        #         # doing it in this order so that the nodes do not get processed more than once
+        #         if 'Node' in shpfile:
+        #             for reach_id in all_reaches_in_shp:
+        #                 if reach_id not in reach_ids:
+        #                     print('Finding nodes for reach', reach_id)
+        #                     node_list = get_reach_nodes(sword_data, reach_id)
+        #                     node_ids.extend(node_list)
+        #                     print('Found', len(node_list), 'nodes...')
+        #         reach_ids.extend(all_reaches_in_shp)
+
+
+
+        retry_num = 3
+        while retry_num != 0:
+            try:
+        
+                with fsspec.open(f"{shpfile}", mode="rb") as shpfh:
+                                    # Locate and open DBF file
         
         print("Accessing: ", shpfile)
 
@@ -258,6 +344,7 @@ def extract_s3_uris(s3_uris, s3_creds, s3_endpoint, args, cont, reach_list=False
                     
                     # Check to see if we should process, we only process things from sword 15
                     xml_fp = dbf_file.replace('.dbf', '.shp.xml') 
+
                     zip_file = zipfile.ZipFile(shpfh, 'r')
                     with zip_file.open(xml_fp, 'r') as f:
                         data = f.read()
@@ -291,6 +378,7 @@ def extract_s3_uris(s3_uris, s3_creds, s3_endpoint, args, cont, reach_list=False
                                     rids = shp_reaches
                                     if reach_list:
                                         reach_intersection = [ value for value in shp_reaches if value in reach_list ]
+                                        print(reach_intersection, 'reach_intersection')
                                         if len(reach_intersection) > 0:
                                             shp_files.append(shpfile)
                                             reach_ids.extend(reach_intersection)
@@ -311,6 +399,7 @@ def extract_s3_uris(s3_uris, s3_creds, s3_endpoint, args, cont, reach_list=False
                                     if reach_list:
                                         for reach_id in reach_list:
                                             reach_r = re.compile(f"^{reach_id[:10]}.*")
+
                                             node_m = list(filter(reach_r.match, node_id))
                                             if node_m:
                                                 node_ids.extend(node_m)
@@ -320,6 +409,7 @@ def extract_s3_uris(s3_uris, s3_creds, s3_endpoint, args, cont, reach_list=False
                                         node_id = {rec["node_id"] for rec in records}
                                         node_ids.extend(list(node_id)) 
                                         shp_files.append(shpfile)
+
                                         for n in node_id:
                                             rid = f"{n[:10]}{n[-1]}"
                                             track_s3_uris(reach_id_s3, rid, shpfile)
@@ -330,7 +420,12 @@ def extract_s3_uris(s3_uris, s3_creds, s3_endpoint, args, cont, reach_list=False
                 s3_list = S3List()
                 s3_uris, s3_creds = s3_list.login_and_run_query(args.shortname, args.provider, args.temporalrange, cont, s3_endpoint, args.ssmkey)
                 retry_num -= 1
+        
 
+
+
+    sword_data.close()
+    
     # Sort and remove duplicates from reaches, nodes, and shapefiles
     reach_ids = list(set(reach_ids))
     reach_ids.sort()
@@ -429,19 +524,24 @@ def write_json(json_object, filename):
     with open(filename, 'w') as jf:
         json.dump(json_object, jf, indent=2)
 
-def run_aws(args, cont, reach_list=False, pass_list_data=False):
+
+def run_aws(args, cont, subset, sword_path,input_dir, reach_list = False, pass_list_data = False, hpc=False):
     """Executes operations to retrieve reach identifiers from shapefiles hosted
     in AWS S3 bucket."""
 
     # Retrieve a list of S3 files
     print(f"Retrieving and storing list of S3 URIs for {cont}.")
     s3_list = S3List()
+
     try:
         if args.simulated:
-            s3_uris, s3_creds = s3_list.get_s3_uris_sim()
+            s3_uris = s3_list.get_s3_uris_sim()
+
         else:
             s3_endpoint = conf["s3_cred_endpoints"][args.provider]
+
             s3_uris, s3_creds = s3_list.login_and_run_query(args.shortname, args.provider, args.temporalrange, cont, s3_endpoint, args.ssmkey)
+
             s3_uris.sort(key=sort_shapefiles)
     except Exception as e:
         print(e)
@@ -449,14 +549,19 @@ def run_aws(args, cont, reach_list=False, pass_list_data=False):
         print("Error encountered. Exiting program.")
         exit(1)
 
+
+    s3_uris, reach_ids, node_ids = extract_s3_uris(s3_uris= s3_uris, args = args, sword_path = sword_path,s3_endpoint = s3_endpoint, reach_list=reach_list, pass_list_data=pass_list_data,input_dir = input_dir, hpc=hpc)
+
+
+    # Write shapefile json
+    json_file = Path(args.directory).joinpath(update_json_filename(conf["s3_list"], cont))
+    write_json(s3_uris, json_file)
+    
+    # Creat a list of only shapfile names
+    shp_files = [shp.split('/')[-1].split('.')[0] for shp in s3_uris]
+    return shp_files, reach_ids, node_ids
     if s3_uris:
-        s3_uris, reach_ids, node_ids, rid_s3 = extract_s3_uris(s3_uris=s3_uris, 
-                                                               s3_creds=s3_creds, 
-                                                               s3_endpoint=s3_endpoint,
-                                                               args=args,
-                                                               reach_list=reach_list, 
-                                                               pass_list_data=pass_list_data,
-                                                               cont = cont)
+        s3_uris, reach_ids, node_ids, rid_s3 = extract_s3_uris(s3_uris= s3_uris, args = args, sword_path = sword_path,s3_endpoint = s3_endpoint, reach_list=reach_list, pass_list_data=pass_list_data,input_dir = input_dir, hpc=hpc)
         if reach_ids:    
             # Write shapefile json
             json_file = Path(args.directory).joinpath(update_json_filename(conf["s3_list"], cont))
@@ -520,11 +625,19 @@ def run_river(args):
     else:
         pass_list_data = False
     
+        
+    # Filenames
+    sword_filename = f"{cont.lower()}_{conf['sword_suffix']}"
+    sos_filename = f"{cont.lower()}_{conf['sos_suffix']}"
+    sword_path = os.path.join(INPUT_DIR, 'sword', sword_filename)
+
     # Determine where run is taking place (local or aws)
     if args.local:
         shp_files, reach_ids, node_ids = run_local(args, cont, subset, reach_list)
     else:
-        shp_files, reach_ids, node_ids = run_aws(args, cont, reach_list, pass_list_data=pass_list_data)
+        shp_files, reach_ids, node_ids = run_aws(args=args, cont=cont, subset=subset, reach_list=reach_list, pass_list_data=pass_list_data, hpc = args.hpc, sword_path = sword_path, input_dir= INPUT_DIR)
+    
+
     
     if shp_files:
         # Create cycle pass data

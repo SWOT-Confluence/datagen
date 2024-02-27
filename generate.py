@@ -14,7 +14,7 @@ Command line arguments:
  -k : unique SSM encryption key identifier
  -o: indicate run on simulated data (optional)
  -l: indicates local run (optional)
- -j: name of JSON file (optional)
+ -j: name of JSON file (optional)f
  -f: name of shapefile directory for local runs (optional)
  -u: Path to JSON file with list of reaches to subset
  -a: Path to JSON ifle with list of passes to subset
@@ -97,6 +97,10 @@ def create_args():
     arg_parser.add_argument("-b",
                             "--hls",
                             help="indicate the generation of hls target files for ssc prediction",
+                            action="store_true")
+    arg_parser.add_argument("-hpc",
+                            "--hpc",
+                            help="Indicates running on an HPC",
                             action="store_true")
     return arg_parser
 
