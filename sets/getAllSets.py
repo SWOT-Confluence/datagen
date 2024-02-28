@@ -17,7 +17,7 @@ try:
 except ImportError:
     from sets.sets import Sets
 
-def main(args=None, continent=None, input_dir=None, output_dir=None):
+def main(args=None, continent=None):
     """Main function for finding sets"""
 
     #context
@@ -49,9 +49,14 @@ def main(args=None, continent=None, input_dir=None, output_dir=None):
     
 
     #data directories
-    INPUT_DIR = input_dir
-    OUTPUT_DIR = output_dir   
-    swordfilepath=INPUT_DIR.joinpath("sword")
+    if index_to_run == -235 or type(os.environ.get("AWS_BATCH_JOB_ID")) != type(None):
+        INPUT_DIR = Path("/data")
+        OUTPUT_DIR = Path("/data")
+        swordfilepath=INPUT_DIR.joinpath("sword")
+    else:
+        INPUT_DIR = Path("/data/")
+        OUTPUT_DIR = Path("/data/")
+        swordfilepath=INPUT_DIR.joinpath("sword")
 
     # read in file with all reaches to run
     reach_json=INPUT_DIR.joinpath(f"reaches_{continent.lower()}.json")

@@ -1,5 +1,3 @@
 __pycache__
 archive
 *.swp
-.terraform
-tfplan

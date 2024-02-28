@@ -23,5 +23,7 @@ COPY generate_data.py /app/generate_data.py
 COPY generate_data_lake.py /app/generate_data_lake.py
 COPY generate.py /app/generate.py
 LABEL version="1.0" \
-        description="Containerized datagen module."
+        description="Containerized Input module." \
+        "confluence.contact"="ntebaldi@umass.edu" \
+        "algorithm.contact"="ntebaldi@umass.edu"
 ENTRYPOINT ["/app/env/bin/python3", "/app/generate.py"]
