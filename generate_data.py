@@ -138,7 +138,7 @@ def extract_ids(shpfiles, creds, pass_list_data = False):
             b_unique = bs_data.find_all('xref_prior_river_db_files')
             sword_version = str(b_unique[0]).split('>')[1].split(',')[0].split('_')[-1].split('.')[0][2:]
             pass_number = str(os.path.basename(shpfile)).split('_')[6]
-            if sword_version == '15':
+            if sword_version == '16':
                 correct_pass = True
                 if pass_list_data:
                     print('passlist provided')
@@ -267,7 +267,7 @@ def extract_s3_uris(s3_uris, s3_creds, s3_endpoint, args, cont, reach_list=False
                     pass_number = str(os.path.basename(shpfile)).split('_')[6]
                     
                     # If processing SWORD 15 and pass is in pass data then proceed with extracting reach and node IDs
-                    if sword_version == '15':
+                    if sword_version == '16':
                         correct_pass = False
                         if pass_list_data:
                             print('passlist provided')

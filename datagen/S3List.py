@@ -43,6 +43,7 @@ class S3List:
         final = requests.get(auth_redirect.headers['location'], allow_redirects=False)
         results = requests.get(s3_endpoint, cookies={'accessToken': final.cookies['accessToken']})
         results.raise_for_status()
+        print('token results', results)
         return json.loads(results.content)       
         
     def get_s3_creds(self, s3_endpoint, edl_username, edl_password, key):
@@ -156,8 +157,11 @@ class S3List:
                     "sort_key" : "start_date",
                     "temporal" : temporal_range
                 }
-        res = requests.get(url=url, params=params)      
+        res = requests.get(url=url, params=params)  
+        print(url, 'url')
+   
         coll = res.json()
+        print(coll, 'result') 
         all_urls = [url["URL"] for res in coll["items"] for url in res["umm"]["RelatedUrls"] if url["Type"] == "GET DATA VIA DIRECT ACCESS"]
         all_urls = [url for url in all_urls if url[-3:] == 'zip']
         return all_urls
