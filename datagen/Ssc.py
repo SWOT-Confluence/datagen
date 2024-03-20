@@ -42,10 +42,10 @@ def find_hls_tiles(line_geo=False, band=False, limit=False, collections = ['HLSL
 
     # date_range = '2017-01-01T00:00:00Z/2018-12-31T23:59:59Z'
 
-    if date_range:
+    if date_range != False:
 # ['2020-01-01:00:00:00Z', '..']
         search = catalog.search(
-            collections=collections, intersects = line_geo, datetime=date_range, limit=limit)
+            collections=collections, intersects = line_geo, datetime=date_range.replace(',', '/'))
     else:
         search = catalog.search(
             collections=collections, intersects = line_geo)
@@ -87,7 +87,7 @@ def find_hls_tiles(line_geo=False, band=False, limit=False, collections = ['HLSL
 
     return links
 
-def find_download_links_for_reach_tiles(data_dir, reach_id, cont):
+def find_download_links_for_reach_tiles(data_dir, reach_id, cont, temporal_range):
     try:
         lat_list, lon_list = get_reach_node_cords(data_dir,reach_id, cont)
         
@@ -103,7 +103,7 @@ def find_download_links_for_reach_tiles(data_dir, reach_id, cont):
         geo_df2 = geo_df.groupby(['ID'])['geometry'].apply(lambda x: LineString(x.tolist()))
         geo_df2 = gpd.GeoDataFrame(geo_df2, geometry='geometry')
         line_geo = list(geo_df2.geometry.unique())[0]
-        links = find_hls_tiles(line_geo)
+        links = find_hls_tiles(line_geo=line_geo, date_range=temporal_range)
 
     except Exception as e:
         links = ['foo']
@@ -159,11 +159,11 @@ def get_reach_node_cords(sword_path, reach_id, cont):
 
 
 
-def ssc_process_continent(reach_ids, cont, data_dir):
+def ssc_process_continent(reach_ids, cont, data_dir, temporal_range):
 
 
     pool = Pool(processes=7)              # start 4 worker processes
-    result = pool.starmap(find_download_links_for_reach_tiles, zip(repeat(data_dir), reach_ids, repeat(cont)))
+    result = pool.starmap(find_download_links_for_reach_tiles, zip(repeat(data_dir), reach_ids, repeat(cont), repeat(temporal_range)))
     # cnt = 0
     # for i in result:
     #     for x in i:

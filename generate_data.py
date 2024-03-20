@@ -581,7 +581,7 @@ def run_river(args):
             print("Retrieving HLS tiles.")
             swordfilepath = os.path.join(INPUT_DIR,'sword', sword_filename)
             json_file = Path(args.directory).joinpath(update_json_filename(conf["hls_links"], cont))
-            hls_link_data = ssc.ssc_process_continent(reach_ids, cont, swordfilepath)
+            hls_link_data = ssc.ssc_process_continent(reach_ids, cont, swordfilepath, args.temporalrange)
             write_json(hls_link_data, json_file)
     
     else:
