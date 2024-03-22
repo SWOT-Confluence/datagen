@@ -14,6 +14,6 @@ conf = {
         'ornldaac':'https://data.ornldaac.earthdata.nasa.gov/s3credentials',
         'gesdisc':'https://data.gesdisc.earthdata.nasa.gov/s3credentials'
     },
-    "sos_suffix": "sword_v15_SOS_priors.nc",
-    "sword_suffix": "sword_v15.nc",
+    "sos_suffix": "sword_v16_SOS_priors.nc",
+    "sword_suffix": "sword_v16.nc",
 }
