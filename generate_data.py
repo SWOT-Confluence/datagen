@@ -103,7 +103,7 @@ def patch_sword(args, INPUT_DIR, sword_filename, conf):
 
     return new_suffix, new_sword_filename
 
-def extract_ids(shpfiles, creds, pass_list_data = False):
+def extract_ids(shpfiles, creds,sword_target_version:str, pass_list_data = False):
     """Extract reach identifiers from shapefile names and return a list.
     
     Parameters
@@ -138,7 +138,7 @@ def extract_ids(shpfiles, creds, pass_list_data = False):
             b_unique = bs_data.find_all('xref_prior_river_db_files')
             sword_version = str(b_unique[0]).split('>')[1].split(',')[0].split('_')[-1].split('.')[0][2:]
             pass_number = str(os.path.basename(shpfile)).split('_')[6]
-            if sword_version == '15':
+            if sword_version == sword_target_version:
                 correct_pass = True
                 if pass_list_data:
                     print('passlist provided')
@@ -227,7 +227,7 @@ def extract_ids_local(shapefiledir, cont, outdir):
     write_json(shp_json, json_file)
     return shp_files, reach_ids, node_ids, rids_shp
 
-def extract_s3_uris(s3_uris, s3_creds, s3_endpoint, args, cont, reach_list=False, 
+def extract_s3_uris(s3_uris, s3_creds, s3_endpoint, args, cont, sword_target_version, reach_list=False, 
                     pass_list_data=False):
     """Extract S3 URIs from reach file subset.
     
@@ -266,8 +266,8 @@ def extract_s3_uris(s3_uris, s3_creds, s3_endpoint, args, cont, reach_list=False
                     sword_version = str(b_unique[0]).split('>')[1].split(',')[0].split('_')[-1].split('.')[0][2:]
                     pass_number = str(os.path.basename(shpfile)).split('_')[6]
                     
-                    # If processing SWORD 15 and pass is in pass data then proceed with extracting reach and node IDs
-                    if sword_version == '15':
+                    # If processing correct sword version and pass is in pass data then proceed with extracting reach and node IDs
+                    if sword_version == sword_target_version:
                         correct_pass = False
                         if pass_list_data:
                             print('passlist provided')
@@ -337,6 +337,7 @@ def extract_s3_uris(s3_uris, s3_creds, s3_endpoint, args, cont, reach_list=False
     node_ids = list(set(node_ids))
     node_ids.sort()
     shp_files = list(set(shp_files))
+    print('here are some example shapefiles from extract s3 uri...', shp_files[:5])
     shp_files.sort(key=sort_shapefiles)
     rid_s3 = {reach_id: sorted(reach_id_s3[reach_id]) for reach_id in sorted(reach_id_s3)}
     return shp_files, reach_ids, node_ids, rid_s3
@@ -429,7 +430,7 @@ def write_json(json_object, filename):
     with open(filename, 'w') as jf:
         json.dump(json_object, jf, indent=2)
 
-def run_aws(args, cont, reach_list=False, pass_list_data=False):
+def run_aws(args, cont, sword_target_version,reach_list=False, pass_list_data=False):
     """Executes operations to retrieve reach identifiers from shapefiles hosted
     in AWS S3 bucket."""
 
@@ -443,18 +444,20 @@ def run_aws(args, cont, reach_list=False, pass_list_data=False):
             s3_endpoint = conf["s3_cred_endpoints"][args.provider]
             s3_uris, s3_creds = s3_list.login_and_run_query(args.shortname, args.provider, args.temporalrange, cont, s3_endpoint, args.ssmkey)
             s3_uris.sort(key=sort_shapefiles)
+            print('here are some sample urls that are sorted...', s3_uris[:5])
     except Exception as e:
         print(e)
         print(traceback.format_exc())
         print("Error encountered. Exiting program.")
         exit(1)
-
+    print('here are s3 uris', s3_uris)
     if s3_uris:
         s3_uris, reach_ids, node_ids, rid_s3 = extract_s3_uris(s3_uris=s3_uris, 
                                                                s3_creds=s3_creds, 
                                                                s3_endpoint=s3_endpoint,
                                                                args=args,
-                                                               reach_list=reach_list, 
+                                                               reach_list=reach_list,
+                                                               sword_target_version = sword_target_version,
                                                                pass_list_data=pass_list_data,
                                                                cont = cont)
         if reach_ids:    
@@ -505,6 +508,7 @@ def run_river(args):
     
     # Determine continent to run on
     cont = get_continent(args.index, Path(args.directory).joinpath(args.jsonfile))
+    SWORD_version = args.swordversion
     
     # Determine if global or subset run
     if args.subsetfile:
@@ -524,7 +528,7 @@ def run_river(args):
     if args.local:
         shp_files, reach_ids, node_ids = run_local(args, cont, subset, reach_list)
     else:
-        shp_files, reach_ids, node_ids = run_aws(args, cont, reach_list, pass_list_data=pass_list_data)
+        shp_files, reach_ids, node_ids = run_aws(args=args, cont=cont, reach_list=reach_list, sword_target_version = SWORD_version,pass_list_data=pass_list_data)
     
     if shp_files:
         # Create cycle pass data

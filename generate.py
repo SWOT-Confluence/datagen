@@ -98,6 +98,10 @@ def create_args():
                             "--hls",
                             help="indicate the generation of hls target files for ssc prediction",
                             action="store_true")
+    arg_parser.add_argument("--swordversion",
+                            help="SWORD verion to run on",
+                            default='16', 
+                            type=str)
     return arg_parser
 
 def main():

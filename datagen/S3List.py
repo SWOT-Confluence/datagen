@@ -43,6 +43,7 @@ class S3List:
         final = requests.get(auth_redirect.headers['location'], allow_redirects=False)
         results = requests.get(s3_endpoint, cookies={'accessToken': final.cookies['accessToken']})
         results.raise_for_status()
+        print('token results', results)
         return json.loads(results.content)       
         
     def get_s3_creds(self, s3_endpoint, edl_username, edl_password, key):
@@ -156,10 +157,15 @@ class S3List:
                     "sort_key" : "start_date",
                     "temporal" : temporal_range
                 }
-        res = requests.get(url=url, params=params)      
+        res = requests.get(url=url, params=params)  
+        print(url, 'url')
+   
         coll = res.json()
+        # print(coll, 'result') 
+        print('results found..')
         all_urls = [url["URL"] for res in coll["items"] for url in res["umm"]["RelatedUrls"] if url["Type"] == "GET DATA VIA DIRECT ACCESS"]
         all_urls = [url for url in all_urls if url[-3:] == 'zip']
+        print('here are some sample urls that were returned...', all_urls[:5])
         return all_urls
     
     def parse_duplicate_files(self, s3_urls:list):
@@ -200,14 +206,17 @@ class S3List:
 
             # parse s3_urls 
             s3_urls = self.parse_duplicate_files(s3_urls = s3_urls)
+            print('here are some sample urls that were parsed...', s3_urls[:5])
             
             # Filter by continent
             s3_urls = [s3 for s3 in s3_urls if continent in s3]
+            print('here are some sample urls that were parsed by continent...', s3_urls[:5])
 
         except Exception as error:
             raise error
         else:
             # Return list and s3 endpoint credentials
+            print('here are some sample urls that are returned...', s3_urls[:5])
             return s3_urls, s3_creds
         
     def get_s3_uris_sim(self):
