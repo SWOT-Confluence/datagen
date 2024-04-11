@@ -3,12 +3,16 @@ import base64
 from http.cookiejar import CookieJar
 import json
 from urllib import request
+import random
+import os
 
 # Third-party imports
 import boto3
 import botocore
 import requests
 import fnmatch
+import datetime
+from datetime import datetime, timedelta
 
 class S3List:
     """Class used to query and download from PO.DAAC's CMR API."""
@@ -144,29 +148,75 @@ class S3List:
         except botocore.exceptions.ClientError as error:
             raise error
 
+    def generate_time_search(self, timekey):
+        # timekey = "2024-01-01T00:00:00Z,2024-04-01T23:59:59Z"
+        time1 = timekey.split(',')[0].split('T')[0]
+        all_date = [int(i) for i in time1.split('-')]
+        time2 = timekey.split(',')[1].split('T')[0]
+        final_hours = [i for i in timekey.split(',')[1].split('T')[1].split(':')]
+        all_date2 = [int(i) for i in time2.split('-')]
+
+
+        start_date = datetime(all_date[0], all_date[1], all_date[2])
+        end_date = datetime(all_date2[0], all_date2[1], all_date2[2])
+        # print(start_date, end_date)
+
+        add_days = timedelta(days=30)
+        add_ending_hours = timedelta(hours = int(final_hours[0]), minutes=int(final_hours[1]), seconds=int(final_hours[2][:-1]))
+
+
+        start_dates = []
+        ending_dates = []
+
+        while start_date <= end_date:
+            # print('start',start_date)
+            start_dates.append(start_date)
+            start_date += add_days
+            # print('end', start_date)
+            ending_dates.append(start_date)
+
+        ending_dates[-1] = end_date + add_ending_hours
+        # print(start_dates)
+        # print(ending_dates)
+
+        parsed_dates = []
+
+        for i in range(len(start_dates)):
+            
+            
+            parsed_dates.append(','.join([start_dates[i].strftime('%Y-%m-%dT%H:%M:%SZ'), ending_dates[i].strftime('%Y-%m-%dT%H:%M:%SZ')]))
+        return parsed_dates
+
+
     def run_query(self, shortname, provider, temporal_range):
         """Run query on collection referenced by shortname from provider."""
 
-        url = f"https://{self.CMR}/search/granules.umm_json"
-        params = {
-                    "provider" : provider, 
-                    "ShortName" : shortname, 
-                    "token" : self._token,
-                    "scroll" : "true",
-                    "page_size" : 2000,
-                    "sort_key" : "start_date",
-                    "temporal" : temporal_range
-                }
-        res = requests.get(url=url, params=params)  
-        print(url, 'url')
-   
-        coll = res.json()
-        # print(coll, 'result') 
-        print('results found..')
-        all_urls = [url["URL"] for res in coll["items"] for url in res["umm"]["RelatedUrls"] if url["Type"] == "GET DATA VIA DIRECT ACCESS"]
-        all_urls = [url for url in all_urls if url[-3:] == 'zip']
-        print('here are some sample urls that were returned...', all_urls[:5])
-        return all_urls
+        all_temporal_ranges = self.generate_time_search(temporal_range)
+        all_urls_out = []
+        for i in all_temporal_ranges:
+
+            url = f"https://{self.CMR}/search/granules.umm_json"
+            params = {
+                        "provider" : provider, 
+                        "ShortName" : shortname, 
+                        "token" : self._token,
+                        "scroll" : "true",
+                        "page_size" : 2000,
+                        "sort_key" : "start_date",
+                        "temporal" : i
+                    }
+            res = requests.get(url=url, params=params)  
+            print(url, 'url')
+    
+            coll = res.json()
+            # print(coll, 'result') 
+            print('results found..')
+            all_urls = [url["URL"] for res in coll["items"] for url in res["umm"]["RelatedUrls"] if url["Type"] == "GET DATA VIA DIRECT ACCESS"]
+            all_urls = [url for url in all_urls if url[-3:] == 'zip']
+            print('here are some sample urls that were returned from raw search...',i,  random.sample(all_urls, 6))
+            all_urls_out.extend(all_urls)
+            print('Current out...', all_urls_out)
+        return all_urls_out
     
     def parse_duplicate_files(self, s3_urls:list):
 
@@ -205,12 +255,16 @@ class S3List:
             s3_urls = self.run_query(short_name, provider, temporal_range)
 
             # parse s3_urls 
-            s3_urls = self.parse_duplicate_files(s3_urls = s3_urls)
-            print('here are some sample urls that were parsed...', s3_urls[:5])
+            # s3_urls = self.parse_duplicate_files(s3_urls = s3_urls)
+
+            # get_index = random.randrange(len(s3_urls))
+    
+            # print(s3_urls[get_index])
+            print('here are some sample urls that were parsed...', random.sample(s3_urls, int(len(s3_urls)/2))) 
             
             # Filter by continent
             s3_urls = [s3 for s3 in s3_urls if continent in s3]
-            print('here are some sample urls that were parsed by continent...', s3_urls[:5])
+            print('here are some sample urls that were parsed by continent...', random.sample(s3_urls, 20))
 
         except Exception as error:
             raise error
