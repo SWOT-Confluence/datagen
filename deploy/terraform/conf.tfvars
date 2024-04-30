@@ -1,3 +1,3 @@
-environment = "dev1"
-prefix      = "confluence-dev1"
-profile     = "confluence-dev1"
+environment = "dev2"
+prefix      = "confluence-dev2"
+profile     = "confluence-dev2"

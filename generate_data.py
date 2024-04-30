@@ -337,7 +337,7 @@ def extract_s3_uris(s3_uris, s3_creds, s3_endpoint, args, cont, sword_target_ver
     node_ids = list(set(node_ids))
     node_ids.sort()
     shp_files = list(set(shp_files))
-    print('here are some example shapefiles from extract s3 uri...', shp_files[:5])
+    print('here are some example shapefiles from extract s3 uri...', shp_files[:1])
     shp_files.sort(key=sort_shapefiles)
     rid_s3 = {reach_id: sorted(reach_id_s3[reach_id]) for reach_id in sorted(reach_id_s3)}
     return shp_files, reach_ids, node_ids, rid_s3
@@ -444,7 +444,7 @@ def run_aws(args, cont, sword_target_version,reach_list=False, pass_list_data=Fa
             s3_endpoint = conf["s3_cred_endpoints"][args.provider]
             s3_uris, s3_creds = s3_list.login_and_run_query(args.shortname, args.provider, args.temporalrange, cont, s3_endpoint, args.ssmkey)
             s3_uris.sort(key=sort_shapefiles)
-            print('here are some sample urls that are sorted...', s3_uris[:5])
+            print('here are some sample urls that are sorted...', s3_uris[:1])
     except Exception as e:
         print(e)
         print(traceback.format_exc())

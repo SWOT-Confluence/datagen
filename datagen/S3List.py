@@ -209,11 +209,12 @@ class S3List:
             print(url, 'url')
     
             coll = res.json()
-            # print(coll, 'result') 
+            print(coll, 'result') 
             print('results found..')
             all_urls = [url["URL"] for res in coll["items"] for url in res["umm"]["RelatedUrls"] if url["Type"] == "GET DATA VIA DIRECT ACCESS"]
             all_urls = [url for url in all_urls if url[-3:] == 'zip']
-            print('here are some sample urls that were returned from raw search...',i,  random.sample(all_urls, 6))
+            print('found', len(all_urls), 'files')
+            # print('here are some sample urls that were returned from raw search...',i,  random.sample(all_urls, 2))
             all_urls_out.extend(all_urls)
             print('Current out...', all_urls_out)
         return all_urls_out
