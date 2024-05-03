@@ -1,6 +1,7 @@
 # Standard imports
 import itertools
 import json
+import sys
 
 # Third-party imports
 import numpy as np
@@ -77,6 +78,7 @@ class Sets:
                 InversionSet=self.find_set_for_reach(sword_data_reach,swordreachids,sword_data_continent)
                 InversionSet['ReachList'],InversionSet['numReaches']=self.get_reach_list(InversionSet)
                 InversionSets[reach['reach_id']]=InversionSet
+            
 
         return InversionSets
 
@@ -149,6 +151,9 @@ class Sets:
                 n_up_add+=1
                 if n_up_add > self.params['MaximumReachesEachDirection']:
                     UpstreamReachIsValid=False
+                    
+        #print('added',n_up_add,'reaches in upstream direction')
+                    
 
         # 3. check whether we can expand downstream. keep going downstream until we hit an invalid reach
         DownstreamReachIsValid=True
@@ -161,6 +166,9 @@ class Sets:
             else:
                 kdn=kdn[0,0]
                 sword_data_reach_dn=self.pull_sword_attributes_for_reach(sword_data_continent,kdn)
+                
+                # print('checking...',sword_data_reach_dn['reach_id'])
+                
                 DownstreamReachIsValid=self.CheckReaches(sword_data_reach,sword_data_reach_dn,'down',CheckVerbosity)
                 if DownstreamReachIsValid:
                     InversionSet['Reaches'][sword_data_reach_dn['reach_id']]=sword_data_reach_dn
@@ -168,7 +176,9 @@ class Sets:
                     n_dn_add+=1
                     if n_dn_add > self.params['MaximumReachesEachDirection']:
                         DownstreamReachIsValid=False
-
+                        
+        #print('added',n_dn_add,'reaches in downstream direction')
+        
         return InversionSet
 
     def CheckReaches(self,sword_data_reach,sword_data_reach_adjacent,direction,verbose):
@@ -178,6 +188,8 @@ class Sets:
              reach_ids.append(reach['reach_id'])
 
         AdjacentReachInReaches=sword_data_reach_adjacent['reach_id'] in reach_ids
+        
+        AdjacentReachIsRiver=str(sword_data_reach_adjacent['reach_id'])[-1]=='1'
 
         OrbitsAreIdentical=False
         if sword_data_reach['swot_obs']==sword_data_reach_adjacent['swot_obs']:
@@ -196,12 +208,15 @@ class Sets:
             ReachesMakeAValidSet=False
         if not self.params['AllowRiverJunction'] and RiverJunctionPresent:
             ReachesMakeAValidSet=False
-        if not AdjacentReachInReaches:
+        if self.params['RequireSetReachesInput'] and not AdjacentReachInReaches:
+            ReachesMakeAValidSet=False
+        if not AdjacentReachIsRiver:
             ReachesMakeAValidSet=False
      
         if verbose:
             print('reach:',sword_data_reach)
-            print('adjacent reach:',sword_data_reach_adjacent)
+            print('adjacent reach is in reach file:',sword_data_reach_adjacent)
+            print('adjacent reach is a river:',sword_data_reach_adjacent)
             print('drainage area pct diff:',AccumulationAreaDifferencePct)
             print('same swot coverage as adjacent reach',OrbitsAreIdentical)
             print('there is a river junction present:',RiverJunctionPresent)
@@ -212,78 +227,88 @@ class Sets:
     def get_reach_list(self,InversionSet):
 
         if len(InversionSet['Reaches'].keys()) == 1:
-             #then the reach list is just one reach
-             ReachList=[InversionSet['OriginReach']['reach_id']]
-             numReaches=1
+            #then the reach list is just one reach
+            ReachList=[InversionSet['OriginReach']['reach_id']]
+            numReaches=1
         else:
-             # make a list of the reaches in the set, in order from upstream to downstream
-             ReachList=[]
-             ReachList.append(InversionSet['UpstreamReach']['reach_id'])
-             EndOfSetReached=ReachList[-1]==InversionSet['DownstreamReach']
+            # make a list of the reaches in the set, in order from upstream to downstream
+            ReachList=[]
+            ReachList.append(InversionSet['UpstreamReach']['reach_id'])
+            EndOfSetReached=ReachList[-1]==InversionSet['DownstreamReach']
 
-             # sort the list of reach ids
-             while not EndOfSetReached:
-                 CurrentEndOfSet=ReachList[-1]
-                 try: 
-                     #can reach here when there are SWORD topological inconsistencies
-                     next_reach_id_downstream=InversionSet['Reaches'][CurrentEndOfSet]['rch_id_dn'][0]
-                 except:
-                     EndOfSetReached=True                     
+            # sort the list of reach ids
+            while not EndOfSetReached:
+                CurrentEndOfSet=ReachList[-1]
+                try: 
+                    #can reach here when there are SWORD topological inconsistencies
+                    next_reach_id_downstream=InversionSet['Reaches'][CurrentEndOfSet]['rch_id_dn'][0]
+                except:
+                    EndOfSetReached=True                     
 
-                 if not EndOfSetReached:
-                     ReachList.append(next_reach_id_downstream)
-                     EndOfSetReached=ReachList[-1]==InversionSet['DownstreamReach']['reach_id']
+                if not EndOfSetReached:
+                    ReachList.append(next_reach_id_downstream)
+                    EndOfSetReached=ReachList[-1]==InversionSet['DownstreamReach']['reach_id']
 
-             numReaches=len(ReachList)
+            numReaches=len(ReachList)
         return ReachList,numReaches
 
     def remove_duplicate_or_high_overlap_sets(self,InversionSets,swordreachids,sword_data_continent):
-       print('removing dupes...')
-       InversionSetsList=self.get_IS_list(InversionSets,'','')
+        print('removing dupes...')
+        #1 switch inversion set datatype from dict to list
+        InversionSetsList=self.get_IS_list(InversionSets,'','','remove_dupes') # this returns a list of dictionaries of reaches
 
-       InversionSetsListNoDupes=[]
-       for InversionSet in InversionSetsList:
-           SetAlreadyIncluded_or_HighOverlap=False
-           for ISnew in InversionSetsListNoDupes:
-               if self.CheckSetsAreSame_or_HighOverlap(InversionSet,ISnew):
-                   SetAlreadyIncluded_or_HighOverlap=True
-           if not SetAlreadyIncluded_or_HighOverlap:
-               InversionSetsListNoDupes.append(InversionSet)
-
-               
+        # idx=3
+        # print('in `remove_duplicate...`. Inversion Set for index=',idx,InversionSetsList[idx])
+        # sys.exit()
+        
+        # 2 remove duplicate and high overlap sets
+        InversionSetsListNoDupes=[]
+        for InversionSet in InversionSetsList:
+            SetAlreadyIncluded_or_HighOverlap=False
+            for ISnew in InversionSetsListNoDupes:
+                if self.CheckSetsAreSame_or_HighOverlap(InversionSet,ISnew):
+                    SetAlreadyIncluded_or_HighOverlap=True
+            if not SetAlreadyIncluded_or_HighOverlap:
+                InversionSetsListNoDupes.append(InversionSet)               
        
-       print('before removing dupes, n=',len(InversionSetsList))
-       print('after removing dupes, n=',len(InversionSetsListNoDupes))
+        # print('before removing dupes and high overlap, n=',len(InversionSetsList))
+        # print('after removing dupes and high overlap, n=',len(InversionSetsListNoDupes))
+        
+        # print('First Inversion Set:',InversionSetsListNoDupes[0])
+        
+        # sys.exit()
 
-       InversionSetsNoDupes={}
-       setkey=0
-       for InversionSet in InversionSetsListNoDupes:
-           setkey+=1
-           ReachList=self.MakeReachList(InversionSet)
+        # 3 switch inversion set data type back to dictionary
+        # transforms from list of dictionaries back to dictionary of dictionaries
+        #  ... now, though, the keys are different. 
+        InversionSetsNoDupes={}
+        for InversionSet in InversionSetsListNoDupes:
+            ReachList=self.MakeReachList(InversionSet)
+            
+            setkey=InversionSet[0]['origin']
+            
+            InversionSetsNoDupes[setkey]={}
+            InversionSetsNoDupes[setkey]['ReachList']=ReachList
+            InversionSetsNoDupes[setkey]['numReaches']=len(InversionSet)
+            InversionSetsNoDupes[setkey]['Reaches']={}
 
-           #setkey=InversionSet[0]['reach_id']
-           InversionSetsNoDupes[setkey]={}
-           InversionSetsNoDupes[setkey]['ReachList']=ReachList
-           InversionSetsNoDupes[setkey]['numReaches']=len(InversionSet)
-           InversionSetsNoDupes[setkey]['Reaches']={}
+            for reachid in InversionSetsNoDupes[setkey]['ReachList']:
+                k=np.argwhere(swordreachids == np.int64(reachid))
+                try:
+                    k=k[0,0] # not sure why argwhere is returning this as a 2-d array. this seems inelegant
+                except:
+                    continue
+                sword_data_reach=self.pull_sword_attributes_for_reach(sword_data_continent,k)
+                InversionSetsNoDupes[setkey]['Reaches'][reachid]=sword_data_reach
 
-           for reachid in InversionSetsNoDupes[setkey]['ReachList']:
-               k=np.argwhere(swordreachids == np.int64(reachid))
-               try:
-                k=k[0,0] # not sure why argwhere is returning this as a 2-d array. this seems inelegant
-               except:
-                continue
-               sword_data_reach=self.pull_sword_attributes_for_reach(sword_data_continent,k)
-               InversionSetsNoDupes[setkey]['Reaches'][reachid]=sword_data_reach
-
-       return InversionSetsNoDupes
+        return InversionSetsNoDupes
 
     #function to check for duplicates
     def CheckSetsAreSame_or_HighOverlap(self,Set1,Set2):
         SetsAreSame=False
         if len(Set1)==len(Set2):
             Set1List=self.MakeReachList(Set1)
-            Set2List=self.MakeReachList(Set2)               
+            Set2List=self.MakeReachList(Set2)                             
         
             if Set1List==Set2List:
                 SetsAreSame=True
@@ -295,7 +320,7 @@ class Sets:
                 pctoverlap= len(overlap) / ( (len(Set1List) + len(Set2List))/2 )
 
                 #if pctoverlap > 0.67:
-                if pctoverlap > self.params['AllowedReachOverlap']:
+                if self.params['AllowedReachOverlap'] != -1 and pctoverlap > self.params['AllowedReachOverlap']:
                     #print('removing set with overlap=',pctoverlap,'for',combo[1])
                     SetsAreSame = True
         
@@ -514,42 +539,54 @@ class Sets:
         swordfile=self.reaches[0]['sword']
         sosfile=self.reaches[0]['sos']
 
-        InversionSetsWrite=self.get_IS_list(InversionSets,swordfile,sosfile)
+        InversionSetsWrite=self.get_IS_list(InversionSets,swordfile,sosfile,'writing')        
 
         with open(out_json, 'w') as json_file:
             json.dump(InversionSetsWrite, json_file, indent=2)
 
-    def get_IS_list(self,InversionSets,swordfile,sosfile):
+    def get_IS_list(self,InversionSets,swordfile,sosfile,mode):
         #makes a list of inversion sets, where each list item is a another list of inversion set data
         #each inversion set list item is a dict of the data for each reach
 
         InversionSetsList=[]
         for IS in InversionSets:
-             InversionSetWrite=[]
-             for reach in InversionSets[IS]['ReachList']:
-                 reachdict={}
-                 reachdict['reach_id']=int(reach)
-                 reachdict['sword']=swordfile
-                 reachdict['swot']=str(reach) + '_SWOT.nc'
-                 reachdict['sos']=sosfile
-                 InversionSetWrite.append(reachdict)
-             InversionSetsList.append(InversionSetWrite)
+            InversionSetWrite=[]
+            for reach in InversionSets[IS]['ReachList']:
+                reachdict={}
+                reachdict['reach_id']=int(reach)
+                reachdict['sword']=swordfile
+                reachdict['swot']=str(reach) + '_SWOT.nc'
+                reachdict['sos']=sosfile
+                if mode == 'remove_dupes':
+                    reachdict['origin']=InversionSets[IS]['OriginReach']['reach_id']
+                InversionSetWrite.append(reachdict)
+            InversionSetsList.append(InversionSetWrite)
         
         return InversionSetsList
 
     def print_stats(self,InversionSets):
         # output some stats
         numReaches=[]
-        for set in InversionSets:
+        for IS in InversionSets:
             #print(InversionSets[set]['ReachList'])
-            numReaches.append(InversionSets[set]['numReaches'])
+            numReaches.append(InversionSets[IS]['numReaches'])
+            
         # print('histogram of number of reaches in set')
         # plt.hist(numReaches)
         # plt.show()
-
+            
+        reaches_in_sets=[]
+        for IS in InversionSets:
+            for reachid in InversionSets[IS]['ReachList']:
+                reaches_in_sets.append(reachid)                
+        
+        numOverlap=len( list( set(reaches_in_sets) & set(list(InversionSets.keys())) ) )
+                            
+        
         print('total number of reaches:',len(self.reaches))
         print('A total of', len(InversionSets.keys()),'sets were identified.')
         print('Total reaches included in sets:',sum(numReaches))
+        print('Of the ',len(self.reaches),' reaches input to SetFinder, ',numOverlap,' are included in the sets')
         
 
     def getsets(self):
@@ -561,23 +598,20 @@ class Sets:
         print('getting inversion set for each reach...')
         # print(sword_data_continent,swordreachids)
         InversionSets=self.extract_inversion_sets_by_reach(sword_data_continent,swordreachids)
-
-        # remove sets with non-river reaches
+                       
+        # remove sets with non-river reaches (this should now be superfluous)
         print('removing sets with non-river reaches...')
         InversionSets=self.remove_sets_with_non_river_reaches(InversionSets)
-
+        
+                
         # remove sets with too few reaches
         print('removing sets with too few reaches...')
-        InversionSets=self.remove_small_sets(InversionSets)
-
-        # remove duplicate sets
+        InversionSets=self.remove_small_sets(InversionSets)                    
+        
+        # remove duplicate or high-overlap sets
         print('removing overlapping or high overlap sets...')
         InversionSets=self.remove_duplicate_or_high_overlap_sets(InversionSets,swordreachids,sword_data_continent)
-
-        # # Removing high overlap sets
-        # if self.params['AllowedReachOverlap'] > 0.:
-        #     InversionSets=self.remove_high_overlap_sets(InversionSets)
-
+                
         # add single-reach sets to ensure all reaches are in a set (if specified in option)
         if self.params['MinimumReaches']==1:
             print('adding in sets with a single reach...')

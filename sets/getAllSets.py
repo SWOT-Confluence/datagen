@@ -39,6 +39,10 @@ def main(args=None, continent=None, input_dir=None, output_dir=None):
             index_to_run=-235
             
         continent=sys.argv[1]
+        
+        # specify local directories to run in, for debug purposes
+        input_dir=Path('input')
+        output_dir=Path('output')        
     else:
         index_to_run=int(args.index)
         continent=continent
@@ -65,10 +69,11 @@ def main(args=None, continent=None, input_dir=None, output_dir=None):
     sword_dataset=Dataset(swordfile)
 
     #get set
-    Algorithms=['MetroMan','HiVDI','SIC']
+    Algorithms=['MetroMan','HiVDI','SIC','NeoBAM']
     #Algorithms=['HiVDI']
-    #Algorithms=['MetroMan']
+    # Algorithms=['MetroMan']
     #Algorithms=['SIC']
+    # Algorithms=['NeoBAM']
     
     for Algorithm in Algorithms:
         print('Getting set for',Algorithm)
@@ -78,7 +83,7 @@ def main(args=None, continent=None, input_dir=None, output_dir=None):
         algoset = Sets(params,reaches,sword_dataset)
         InversionSets=algoset.getsets()
 
-        # output to json file
+        # output to json file        
         algoset.write_inversion_set_data(InversionSets,OUTPUT_DIR)
 
     #close sword dataset
@@ -94,6 +99,21 @@ def SetParameters(algo, cont):
     cont: string
         Continent abrevation
     """
+    
+    """
+     Note: 
+     
+     In some cases, the sword topology causes reaches to be up and downstream from another.
+     This causes the the set finder to run infinitly when looking up and downstream for valid set reaches
+     We put a limit of 1000 just in case this occures. When it does occur, it only adds the two problematic reaches to the set
+     (previously set to np.inf)
+    """    
+    LargeNumber=1000
+
+    # RequireAllReachesInFile=True #usual operation, set this to true
+    RequireAllReachesInFile=False #in dev set "step 1" set this to false, so we can scrape a list of all reaches in sets
+
+    
     params={}
     params['algo']=algo
     if algo == 'MetroMan':
@@ -104,6 +124,7 @@ def SetParameters(algo, cont):
         params['MaximumReachesEachDirection']=2
         params['MinimumReaches']=3
         params['AllowedReachOverlap']=-1 # specify -1 to just remove duplicates
+        params['RequireSetReachesInput']=RequireAllReachesInFile # typically set to true: requires all reaches in set to be in input reach list
         # params['']
     elif algo == 'HiVDI':
         params['RequireIdenticalOrbits']=False
@@ -116,23 +137,29 @@ def SetParameters(algo, cont):
          We put a limit of 1000 just in case this occures. When it does occur, it only adds the two problematic reaches to the set.
          (previously set to np.inf)
         """
-        params['MaximumReachesEachDirection']=1000
+        params['MaximumReachesEachDirection']=LargeNumber
         params['MinimumReaches']=1
         params['AllowedReachOverlap']=.5
+        params['RequireSetReachesInput']=RequireAllReachesInFile # typically set to true: requires all reaches in set to be in input reach list
     elif algo == 'SIC':
         params['RequireIdenticalOrbits']=False
         params['DrainageAreaPctCutoff']=30.
         params['AllowRiverJunction']=False
         params['Filename']=f'sicsets_{cont.lower()}.json'
-        """
-         In some cases, the sword topology causes reaches to be up and downstream from another.
-         This causes the the set finder to run infinitly when looking up and downstream for valid set reaches
-         We put a limit of 1000 just in case this occures. When it does occur, it only adds the two problematic reaches to the set
-         (previously set to np.inf)
-        """
-        params['MaximumReachesEachDirection']=1000
+        params['MaximumReachesEachDirection']=LargeNumber
         params['MinimumReaches']=1
         params['AllowedReachOverlap']=.67
+        params['RequireSetReachesInput']=RequireAllReachesInFile # typically set to true: requires all reaches in set to be in input reach list
+    elif algo == 'NeoBAM':
+        params['RequireIdenticalOrbits']=False
+        params['DrainageAreaPctCutoff']=10.
+        params['AllowRiverJunction']=False
+        params['Filename']=f'neosets_{cont.lower()}.json'
+        params['MaximumReachesEachDirection']=1000
+        params['MinimumReaches']=3
+        params['AllowedReachOverlap']=0 # specify -1 to just remove duplicates
+        params['RequireSetReachesInput']=RequireAllReachesInFile # typically set to true: requires all reaches in set to be in input reach list
+        
  
     return params
 
