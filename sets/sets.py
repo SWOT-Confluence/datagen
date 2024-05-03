@@ -568,7 +568,6 @@ class Sets:
         # output some stats
         numReaches=[]
         for IS in InversionSets:
-            #print(InversionSets[set]['ReachList'])
             numReaches.append(InversionSets[IS]['numReaches'])
             
         # print('histogram of number of reaches in set')
@@ -578,15 +577,18 @@ class Sets:
         reaches_in_sets=[]
         for IS in InversionSets:
             for reachid in InversionSets[IS]['ReachList']:
-                reaches_in_sets.append(reachid)                
+                reaches_in_sets.append(reachid)        
+                
+        reaches_specified=[]
+        for reach in self.reaches:
+            reaches_specified.append(reach['reach_id'])                                                
         
-        numOverlap=len( list( set(reaches_in_sets) & set(list(InversionSets.keys())) ) )
-                            
+        numOverlap=len( list( set(reaches_in_sets) & set(reaches_specified) ) )                            
         
-        print('total number of reaches:',len(self.reaches))
-        print('A total of', len(InversionSets.keys()),'sets were identified.')
-        print('Total reaches included in sets:',sum(numReaches))
-        print('Of the ',len(self.reaches),' reaches input to SetFinder, ',numOverlap,' are included in the sets')
+        print('    total number of reaches:',len(self.reaches))
+        print('    A total of', len(InversionSets.keys()),'sets were identified.')
+        print('    Total reaches included in sets:',sum(numReaches))
+        print('    Of the ',len(self.reaches),' reaches input to SetFinder, ',numOverlap,' are included in the sets')
         
 
     def getsets(self):

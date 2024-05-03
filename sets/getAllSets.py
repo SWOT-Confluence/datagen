@@ -78,7 +78,9 @@ def main(args=None, continent=None, input_dir=None, output_dir=None):
     for Algorithm in Algorithms:
         print('Getting set for',Algorithm)
         params = SetParameters(Algorithm, continent)
-        print(params)
+        # print(params)
+        for key, value in params.items():
+            print("    {} : {}.".format(key.capitalize(), value))
 
         algoset = Sets(params,reaches,sword_dataset)
         InversionSets=algoset.getsets()
