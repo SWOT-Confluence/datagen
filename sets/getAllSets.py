@@ -110,8 +110,8 @@ def SetParameters(algo, cont):
     """    
     LargeNumber=1000
 
-    # RequireAllReachesInFile=True #usual operation, set this to true
-    RequireAllReachesInFile=False #in dev set "step 1" set this to false, so we can scrape a list of all reaches in sets
+    RequireAllReachesInFile=True #usual operation, set this to true
+    #RequireAllReachesInFile=False #in dev set "step 1" set this to false, so we can scrape a list of all reaches in sets
 
     
     params={}
