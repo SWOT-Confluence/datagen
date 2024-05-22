@@ -243,7 +243,7 @@ def extract_s3_uris(s3_uris, s3_creds, s3_endpoint, args, cont, sword_target_ver
     cnt = 0
     for shpfile in s3_uris:
         
-        print("Accessing: ", shpfile)
+        # print("Accessing: ", shpfile)
 
         # Try to access S3 shapefiles with credentials 3 times
         retry_num = 3
@@ -460,6 +460,8 @@ def run_aws(args, cont, sword_target_version,reach_list=False, pass_list_data=Fa
                                                                sword_target_version = sword_target_version,
                                                                pass_list_data=pass_list_data,
                                                                cont = cont)
+        print('Here are some extracted s3_uris')
+        print(s3_uris[:1])
         if reach_ids:    
             # Write shapefile json
             json_file = Path(args.directory).joinpath(update_json_filename(conf["s3_list"], cont))
@@ -473,6 +475,7 @@ def run_aws(args, cont, sword_target_version,reach_list=False, pass_list_data=Fa
             shp_files = [shp.split('/')[-1].split('.')[0] for shp in s3_uris]
             return shp_files, reach_ids, node_ids
         else:
+            print('No reach ids found...')
             return [], [], []
     else:
         return [], [] ,[]
@@ -513,6 +516,7 @@ def run_river(args):
     # Determine if global or subset run
     if args.subsetfile:
         reach_list = get_subset(args.subsetfile)
+        reach_list = [str(i) for i in reach_list]
         subset = True
     else:
         reach_list = []

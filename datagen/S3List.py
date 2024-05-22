@@ -147,6 +147,12 @@ class S3List:
             self._token = ssm_client.get_parameter(Name="bearer--edl--token", WithDecryption=True)["Parameter"]["Value"]
         except botocore.exceptions.ClientError as error:
             raise error
+    def get_granule_links(granules):
+        """Return list of granule links for either https or S3."""
+        
+        s3_granules = [ url["URL"] for item in granules["items"] for url in item["umm"]["RelatedUrls"] if url["Type"] == "GET DATA VIA DIRECT ACCESS" ]
+            
+        return s3_granules
 
     def generate_time_search(self, timekey):
         # timekey = "2024-01-01T00:00:00Z,2024-04-01T23:59:59Z"
@@ -159,7 +165,6 @@ class S3List:
 
         start_date = datetime(all_date[0], all_date[1], all_date[2])
         end_date = datetime(all_date2[0], all_date2[1], all_date2[2])
-        # print(start_date, end_date)
 
         add_days = timedelta(days=30)
         add_ending_hours = timedelta(hours = int(final_hours[0]), minutes=int(final_hours[1]), seconds=int(final_hours[2][:-1]))
@@ -169,15 +174,11 @@ class S3List:
         ending_dates = []
 
         while start_date <= end_date:
-            # print('start',start_date)
             start_dates.append(start_date)
             start_date += add_days
-            # print('end', start_date)
             ending_dates.append(start_date)
 
         ending_dates[-1] = end_date + add_ending_hours
-        # print(start_dates)
-        # print(ending_dates)
 
         parsed_dates = []
 
@@ -191,32 +192,69 @@ class S3List:
     def run_query(self, shortname, provider, temporal_range):
         """Run query on collection referenced by shortname from provider."""
 
-        all_temporal_ranges = self.generate_time_search(temporal_range)
-        all_urls_out = []
-        for i in all_temporal_ranges:
+        # all_temporal_ranges = self.generate_time_search(temporal_range)
+        # all_urls_out = []
+        # for i in all_temporal_ranges:
 
-            url = f"https://{self.CMR}/search/granules.umm_json"
-            params = {
-                        "provider" : provider, 
-                        "ShortName" : shortname, 
-                        "token" : self._token,
-                        "scroll" : "true",
-                        "page_size" : 2000,
-                        "sort_key" : "start_date",
-                        "temporal" : i
-                    }
-            res = requests.get(url=url, params=params)  
-            print(url, 'url')
+        url = f"https://{self.CMR}/search/granules.umm_json"
+        #     params = {
+        #                 "provider" : provider, 
+        #                 "ShortName" : shortname, 
+        #                 "token" : self._token,
+        #                 "scroll" : "true",
+        #                 "page_size" : 2000,
+        #                 "sort_key" : "start_date",
+        #                 "temporal" : i
+        #             }
+        #     res = requests.get(url=url, params=params)  
+
     
-            coll = res.json()
-            print(coll, 'result') 
-            print('results found..')
+        #     coll = res.json()
+        #     all_urls = [url["URL"] for res in coll["items"] for url in res["umm"]["RelatedUrls"] if url["Type"] == "GET DATA VIA DIRECT ACCESS"]
+        #     all_urls = [url for url in all_urls if url[-3:] == 'zip']
+        #     all_urls_out.extend(all_urls)
+        # return all_urls_out
+
+        # temporal_range = f"{self.revision_start.strftime('%Y-%m-%dT%H:%M:%SZ')},{self.revision_end.strftime('%Y-%m-%dT%H:%M:%SZ')}"
+        params = {
+            "short_name" : shortname,
+            "revision_date": temporal_range,
+            "page_size": 2000,
+            "token" : self._token,
+        }
+
+        all_urls_out = []
+
+        cmr_response = requests.get(url=url, params=params)
+        hits = cmr_response.headers["CMR-Hits"]
+        coll = cmr_response.json()
+        # all_urls = self._get_granule_ur_list(cmr_response.json())
+        all_urls = [url["URL"] for res in coll["items"] for url in res["umm"]["RelatedUrls"] if url["Type"] == "GET DATA VIA DIRECT ACCESS"]
+        all_urls = [url for url in all_urls if url[-3:] == 'zip']
+        all_urls_out.extend(all_urls)
+        # total = len(self.cmr_granules.keys())
+        
+        if "CMR-Search-After" in cmr_response.headers.keys(): 
+            search_after = cmr_response.headers["CMR-Search-After"]
+        else:
+            search_after = ""
+        headers = {}
+        while search_after:
+            # print(f"Searching for more results...{total} out of {hits}")
+            headers["CMR-Search-After"] = search_after
+            cmr_response = requests.get(url=url, headers=headers, params=params)
+            # self.cmr_granules.update(self._get_granule_ur_list(cmr_response.json()))
+            coll = cmr_response.json()
             all_urls = [url["URL"] for res in coll["items"] for url in res["umm"]["RelatedUrls"] if url["Type"] == "GET DATA VIA DIRECT ACCESS"]
             all_urls = [url for url in all_urls if url[-3:] == 'zip']
-            print('found', len(all_urls), 'files')
-            # print('here are some sample urls that were returned from raw search...',i,  random.sample(all_urls, 2))
             all_urls_out.extend(all_urls)
-            print('Current out...', all_urls_out)
+            # total = len(self.cmr_granules.keys())
+            if "CMR-Search-After" in cmr_response.headers.keys(): 
+                search_after = cmr_response.headers["CMR-Search-After"]
+            else:
+                search_after = ""
+                
+        # print(f"Located {len(self.cmr_granules.keys())} granules.")
         return all_urls_out
     
     def parse_duplicate_files(self, s3_urls:list):
@@ -236,7 +274,7 @@ class S3List:
                 padded_max = str("{:02d}".format(max(all_processings_nums)))
                 max_path = fnmatch.filter(all_processings, f'*{padded_max}.zip')
                 parsed.append(max_path[0])
-                # print('found a double')
+                print('found a double', i)
             else:
                 parsed.append(i)
 
@@ -261,11 +299,9 @@ class S3List:
             # get_index = random.randrange(len(s3_urls))
     
             # print(s3_urls[get_index])
-            print('here are some sample urls that were parsed...', random.sample(s3_urls, int(len(s3_urls)/2))) 
             
             # Filter by continent
             s3_urls = [s3 for s3 in s3_urls if continent in s3]
-            print('here are some sample urls that were parsed by continent...', random.sample(s3_urls, 20))
 
         except Exception as error:
             raise error
