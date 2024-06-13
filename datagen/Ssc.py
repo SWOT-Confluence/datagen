@@ -15,6 +15,9 @@ from itertools import repeat
 import netCDF4 as ncf
 from itertools import chain
 
+# Local importse
+from datagen.S3List import S3List
+
 
 
 
@@ -41,51 +44,52 @@ def find_hls_tiles(line_geo=False, band=False, limit=False, collections = ['HLSL
     # point = point[0]
 
     # date_range = '2017-01-01T00:00:00Z/2018-12-31T23:59:59Z'
-
-    if date_range != False:
+    if date_range == False:
 # ['2020-01-01:00:00:00Z', '..']
-        search = catalog.search(
-            collections=collections, intersects = line_geo, datetime=date_range.replace(',', '/'))
+        # search = catalog.search(
+        #     collections=collections, intersects = line_geo, datetime=date_range.replace(',', '/'))
+        raise ValueError('Please supply a date for ssc...')
     else:
-        search = catalog.search(
-            collections=collections, intersects = line_geo)
-
-
-    # print(f'{search.matched()} Tiles Found...')
-
-
-    item_collection = search.get_all_items()
-
-    if limit:
-        item_collection = item_collection[:limit]
-
-    if band:
+        all_temporal_ranges = S3List.generate_time_search(date_range)
         links = []
-        if type(band) == list:
-            for i in item_collection:
-                for b in band:
-                    link = i.assets[b].href
-                    # print(link)
-                    links.append(link)
-        
-        else:
-            for i in item_collection:
-                link = i.assets[band].href
-                links.append(link)
-    
-    else:
-        links =[]
-        for i in item_collection:
-            # print(i.assets)
-            for key in i.assets:
-                if key.startswith('B'):
-                    # link = i.assets[key].href.replace('https://data.lpdaac.earthdatacloud.nasa.gov/', 's3://')
-                    link = i.assets[key].href
+        for i in all_temporal_ranges:
+            search = catalog.search(
+                collections=collections, intersects = line_geo, datetime=i.replace(',', '/'))
 
-                    # print(link)
-                    links.append(link)
 
-    return links
+            # print(f'{search.matched()} Tiles Found...')
+
+
+            item_collection = search.get_all_items()
+
+            if limit:
+                item_collection = item_collection[:limit]
+
+            if band:
+                if type(band) == list:
+                    for i in item_collection:
+                        for b in band:
+                            link = i.assets[b].href
+                            # print(link)
+                            links.append(link)
+                
+                else:
+                    for i in item_collection:
+                        link = i.assets[band].href
+                        links.append(link)
+            
+            else:
+                for i in item_collection:
+                    # print(i.assets)
+                    for key in i.assets:
+                        if key.startswith('B'):
+                            # link = i.assets[key].href.replace('https://data.lpdaac.earthdatacloud.nasa.gov/', 's3://')
+                            link = i.assets[key].href
+
+                            # print(link)
+                            links.append(link)
+
+        return links
 
 def find_download_links_for_reach_tiles(data_dir, reach_id, cont, temporal_range):
     try:
