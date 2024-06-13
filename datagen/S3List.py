@@ -19,6 +19,14 @@ class S3List:
 
     CMR = "cmr.earthdata.nasa.gov"
     URS = "urs.earthdata.nasa.gov"
+    CONTINENT_DICT = {
+        "AF": ["AF"],
+        "AS": ["AS", "SI"],
+        "EU": ["EU"],
+        "NA": ["NA", "AR", "GR"],
+        "OC": ["AU"],
+        "SA": ["SA"]
+    }
 
     def __init__(self):
         self._token = None
@@ -147,6 +155,7 @@ class S3List:
             self._token = ssm_client.get_parameter(Name="bearer--edl--token", WithDecryption=True)["Parameter"]["Value"]
         except botocore.exceptions.ClientError as error:
             raise error
+    
     def get_granule_links(granules):
         """Return list of granule links for either https or S3."""
         
@@ -233,6 +242,7 @@ class S3List:
         all_urls = [url for url in all_urls if url[-3:] == 'zip']
         all_urls_out.extend(all_urls)
         # total = len(self.cmr_granules.keys())
+        print(f"CMR Located S3 URLS #: {len(all_urls_out)}")
         
         if "CMR-Search-After" in cmr_response.headers.keys(): 
             search_after = cmr_response.headers["CMR-Search-After"]
@@ -248,6 +258,7 @@ class S3List:
             all_urls = [url["URL"] for res in coll["items"] for url in res["umm"]["RelatedUrls"] if url["Type"] == "GET DATA VIA DIRECT ACCESS"]
             all_urls = [url for url in all_urls if url[-3:] == 'zip']
             all_urls_out.extend(all_urls)
+            print(f"CMR Located S3 URLS #: {len(all_urls_out)}")
             # total = len(self.cmr_granules.keys())
             if "CMR-Search-After" in cmr_response.headers.keys(): 
                 search_after = cmr_response.headers["CMR-Search-After"]
@@ -301,7 +312,7 @@ class S3List:
             # print(s3_urls[get_index])
             
             # Filter by continent
-            s3_urls = [s3 for s3 in s3_urls if continent in s3]
+            s3_urls = self.filter_continents(s3_urls, continent)
 
         except Exception as error:
             raise error
@@ -309,6 +320,17 @@ class S3List:
             # Return list and s3 endpoint credentials
             print('here are some sample urls that are returned...', s3_urls[:5])
             return s3_urls, s3_creds
+        
+    def filter_continents(self, s3_links, continent):
+        """Filter shapefiles by continent and return list."""
+        
+        s3_urls = []
+        continent_filters = self.CONTINENT_DICT[continent]
+        for s3 in s3_links:
+            for continent_filter in continent_filters:
+                if continent_filter in s3:
+                    s3_urls.append(s3)
+        return s3_urls        
         
     def get_s3_uris_sim(self):
         """Get a list of S3 URIs for S3-hosted simulated data."""
