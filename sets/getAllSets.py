@@ -41,8 +41,11 @@ def main(args=None, continent=None, input_dir=None, output_dir=None):
         continent=sys.argv[1]
         
         # specify local directories to run in, for debug purposes
-        input_dir=Path('input')
-        output_dir=Path('output')        
+        # input_dir=Path('input')
+        # output_dir=Path('output')        
+        input_dir=Path('postinput')
+        output_dir=Path('postoutput')        
+        
     else:
         index_to_run=int(args.index)
         continent=continent
@@ -113,7 +116,7 @@ def SetParameters(algo, cont):
     LargeNumber=1000
 
     RequireAllReachesInFile=True #usual operation, set this to true
-    #RequireAllReachesInFile=False #in dev set "step 1" set this to false, so we can scrape a list of all reaches in sets
+    # RequireAllReachesInFile=False #in dev set "step 1" set this to false, so we can scrape a list of all reaches in sets
 
     
     params={}

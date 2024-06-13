@@ -305,24 +305,26 @@ class Sets:
 
     #function to check for duplicates
     def CheckSetsAreSame_or_HighOverlap(self,Set1,Set2):
+        
+        Set1List=self.MakeReachList(Set1)
+        Set2List=self.MakeReachList(Set2)               
+        
         SetsAreSame=False
         if len(Set1)==len(Set2):
-            Set1List=self.MakeReachList(Set1)
-            Set2List=self.MakeReachList(Set2)                             
         
             if Set1List==Set2List:
                 SetsAreSame=True
 
-            if not SetsAreSame:
-                
-                # if they are not the same, test for overlap
-                overlap = list( set(Set1List) & set(Set2List))
-                pctoverlap= len(overlap) / ( (len(Set1List) + len(Set2List))/2 )
+        if not SetsAreSame:
 
-                #if pctoverlap > 0.67:
-                if self.params['AllowedReachOverlap'] != -1 and pctoverlap > self.params['AllowedReachOverlap']:
-                    #print('removing set with overlap=',pctoverlap,'for',combo[1])
-                    SetsAreSame = True
+            # if they are not the same, test for overlap
+            overlap = list( set(Set1List) & set(Set2List))
+            pctoverlap= len(overlap) / ( (len(Set1List) + len(Set2List))/2 )
+
+            #if pctoverlap > 0.67:
+            if self.params['AllowedReachOverlap'] != -1 and pctoverlap > self.params['AllowedReachOverlap']:
+                #print('removing set with overlap=',pctoverlap,'for',combo[1])
+                SetsAreSame = True
         
         return SetsAreSame
 
@@ -536,7 +538,8 @@ class Sets:
         out_json = OutputDir / self.params['Filename']
 
         # these should be the same for each reach in the reaches file
-        swordfile=self.reaches[0]['sword']
+        swordfile=self.reaches[0]['sword']        
+        #swordfile=swordfile[0:2]+'_sword_v16_patch.nc'        
         sosfile=self.reaches[0]['sos']
 
         InversionSetsWrite=self.get_IS_list(InversionSets,swordfile,sosfile,'writing')        
@@ -594,7 +597,7 @@ class Sets:
     def getsets(self):
         # extract continent data into dict
         print('extracting data...')
-        swordreachids,sword_data_continent=self.extract_data_sword_continent_file()
+        swordreachids,sword_data_continent=self.extract_data_sword_continent_file()                
 
         # get an inversion set for each reach
         print('getting inversion set for each reach...')
