@@ -315,6 +315,7 @@ class S3List:
             s3_urls = self.filter_continents(s3_urls, continent)
 
         except Exception as error:
+            print("S3List - ERROR: ", error)
             raise error
         else:
             # Return list and s3 endpoint credentials
