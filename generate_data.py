@@ -202,7 +202,7 @@ def extract_s3_uris(s3_uris, s3_creds, s3_endpoint, args, cont, sword_target_ver
                 print('generate_data - INFO: new creds expire: ', s3_creds['expiration'])
 
     # Sort and remove duplicates from reaches, nodes, and shapefiles
-    rid_s3 = sort_lists(reach_ids, node_ids, shp_files, reach_id_s3)
+    reach_ids, node_ids, shp_files, rid_s3 = sort_lists(reach_ids, node_ids, shp_files, reach_id_s3)
         
     return shp_files, reach_ids, node_ids, rid_s3
 
@@ -308,7 +308,7 @@ def sort_lists(reach_ids, node_ids, shp_files, reach_id_s3):
     shp_files = list(set(shp_files))
     shp_files.sort(key=sort_shapefiles)
     rid_s3 = {reach_id: sorted(reach_id_s3[reach_id]) for reach_id in sorted(reach_id_s3)}
-    return rid_s3
+    return reach_ids, node_ids, shp_files, rid_s3
 
 
 def extract_s3_uris_local(shapefiledir, cont, outdir, reach_list):
