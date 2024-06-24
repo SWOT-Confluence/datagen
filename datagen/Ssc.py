@@ -16,7 +16,7 @@ import netCDF4 as ncf
 from itertools import chain
 
 # Local importse
-from datagen.S3List import S3List
+from datagen.S3List import generate_time_search
 
 
 
@@ -50,7 +50,7 @@ def find_hls_tiles(line_geo=False, band=False, limit=False, collections = ['HLSL
         #     collections=collections, intersects = line_geo, datetime=date_range.replace(',', '/'))
         raise ValueError('Please supply a date for ssc...')
     else:
-        all_temporal_ranges = S3List.generate_time_search(date_range)
+        all_temporal_ranges = generate_time_search(date_range)
         links = []
         for i in all_temporal_ranges:
             search = catalog.search(

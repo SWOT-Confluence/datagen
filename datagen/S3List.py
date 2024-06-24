@@ -163,40 +163,6 @@ class S3List:
             
         return s3_granules
 
-    def generate_time_search(self, timekey):
-        # timekey = "2024-01-01T00:00:00Z,2024-04-01T23:59:59Z"
-        time1 = timekey.split(',')[0].split('T')[0]
-        all_date = [int(i) for i in time1.split('-')]
-        time2 = timekey.split(',')[1].split('T')[0]
-        final_hours = [i for i in timekey.split(',')[1].split('T')[1].split(':')]
-        all_date2 = [int(i) for i in time2.split('-')]
-
-
-        start_date = datetime(all_date[0], all_date[1], all_date[2])
-        end_date = datetime(all_date2[0], all_date2[1], all_date2[2])
-
-        add_days = timedelta(days=30)
-        add_ending_hours = timedelta(hours = int(final_hours[0]), minutes=int(final_hours[1]), seconds=int(final_hours[2][:-1]))
-
-
-        start_dates = []
-        ending_dates = []
-
-        while start_date <= end_date:
-            start_dates.append(start_date)
-            start_date += add_days
-            ending_dates.append(start_date)
-
-        ending_dates[-1] = end_date + add_ending_hours
-
-        parsed_dates = []
-
-        for i in range(len(start_dates)):
-            
-            
-            parsed_dates.append(','.join([start_dates[i].strftime('%Y-%m-%dT%H:%M:%SZ'), ending_dates[i].strftime('%Y-%m-%dT%H:%M:%SZ')]))
-        return parsed_dates
-
 
     def run_query(self, shortname, provider, temporal_range):
         """Run query on collection referenced by shortname from provider."""
@@ -361,3 +327,38 @@ class S3List:
             raise
         
         return [ f"s3://confluence-swot/{shapefile['Key']}" for shapefile in response["Contents"] ], creds
+
+
+def generate_time_search(timekey):
+        # timekey = "2024-01-01T00:00:00Z,2024-04-01T23:59:59Z"
+        time1 = timekey.split(',')[0].split('T')[0]
+        all_date = [int(i) for i in time1.split('-')]
+        time2 = timekey.split(',')[1].split('T')[0]
+        final_hours = [i for i in timekey.split(',')[1].split('T')[1].split(':')]
+        all_date2 = [int(i) for i in time2.split('-')]
+
+
+        start_date = datetime(all_date[0], all_date[1], all_date[2])
+        end_date = datetime(all_date2[0], all_date2[1], all_date2[2])
+
+        add_days = timedelta(days=30)
+        add_ending_hours = timedelta(hours = int(final_hours[0]), minutes=int(final_hours[1]), seconds=int(final_hours[2][:-1]))
+
+
+        start_dates = []
+        ending_dates = []
+
+        while start_date <= end_date:
+            start_dates.append(start_date)
+            start_date += add_days
+            ending_dates.append(start_date)
+
+        ending_dates[-1] = end_date + add_ending_hours
+
+        parsed_dates = []
+
+        for i in range(len(start_dates)):
+            
+            
+            parsed_dates.append(','.join([start_dates[i].strftime('%Y-%m-%dT%H:%M:%SZ'), ending_dates[i].strftime('%Y-%m-%dT%H:%M:%SZ')]))
+        return parsed_dates
